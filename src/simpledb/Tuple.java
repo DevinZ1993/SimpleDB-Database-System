@@ -93,7 +93,7 @@ public class Tuple {
     	for  (int i=1; i<fields.length; i++) {
     		sb.append("\t"+fields[i].toString());
     	}
-    	sb.append('\n');
+    	//sb.append('\n');
         return sb.toString();
     }
 }

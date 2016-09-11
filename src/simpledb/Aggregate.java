@@ -9,6 +9,10 @@ import java.util.*;
  */
 public class Aggregate extends AbstractDbIterator {
 
+	private final TupleDesc desc;
+	private final Aggregator aggregator;
+	private final DbIterator iterator;
+	
     /**
      * Constructor.  
      *
@@ -22,9 +26,35 @@ public class Aggregate extends AbstractDbIterator {
      * @param aop The aggregation operator to use
      */
     public Aggregate(DbIterator child, int afield, int gfield, Aggregator.Op aop) {
-        // some code goes here
+        // Done
+    	String afieldName = (null != child.getTupleDesc().getFieldName(afield)) ?
+    			aggName(aop)+"("+child.getTupleDesc().getFieldName(afield)+")" : null;
+    	
+    	if (gfield == Aggregator.NO_GROUPING) {
+    		desc = new TupleDesc(new Type[]{child.getTupleDesc().getType(afield)},
+    				new String[]{afieldName});
+    		aggregator = (Type.INT_TYPE == child.getTupleDesc().getType(afield)) ?
+    				new IntAggregator(gfield, null, afield, aop):
+    					new StringAggregator(gfield, null, afield, aop);
+    	} else {
+    		desc = new TupleDesc(new Type[]{child.getTupleDesc().getType(gfield), child.getTupleDesc().getType(afield)},
+    				new String[]{child.getTupleDesc().getFieldName(gfield), afieldName});
+    		aggregator = (Type.INT_TYPE == child.getTupleDesc().getType(afield)) ?
+    				new IntAggregator(gfield, child.getTupleDesc().getType(gfield), afield, aop):
+    					new StringAggregator(gfield, child.getTupleDesc().getType(gfield), afield, aop);
+    	}
+    	try {
+    		child.open();
+			while (child.hasNext()) {
+				aggregator.merge(child.next());
+			}
+			child.close();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+    	iterator = aggregator.iterator();
     }
-
+    
     public static String aggName(Aggregator.Op aop) {
         switch (aop) {
         case MIN:
@@ -43,7 +73,8 @@ public class Aggregate extends AbstractDbIterator {
 
     public void open()
         throws NoSuchElementException, DbException, TransactionAbortedException {
-        // some code goes here
+        // Done
+    	iterator.open();
     }
 
     /**
@@ -56,11 +87,18 @@ public class Aggregate extends AbstractDbIterator {
      */
     protected Tuple readNext() throws TransactionAbortedException, DbException {
         // some code goes here
-        return null;
+    	if (!iterator.hasNext()) {
+    		return null;
+    	} else {
+    		Tuple tup = iterator.next();
+    		System.out.println("actural:"+tup);
+;    		return tup;
+    	}
     }
 
     public void rewind() throws DbException, TransactionAbortedException {
-        // some code goes here
+        // Done
+    	iterator.rewind();
     }
 
     /**
@@ -75,11 +113,12 @@ public class Aggregate extends AbstractDbIterator {
      * of the child iterator. 
      */
     public TupleDesc getTupleDesc() {
-        // some code goes here
-        return null;
+        // Done
+    	return desc;
     }
 
     public void close() {
-        // some code goes here
+        // Done
+    	iterator.close();
     }
 }

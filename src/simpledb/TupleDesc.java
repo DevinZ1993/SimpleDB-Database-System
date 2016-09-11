@@ -99,10 +99,13 @@ public class TupleDesc {
      * @throws NoSuchElementException if no field with a matching name is found.
      */
     public int nameToId(String name) throws NoSuchElementException {
-    	// Done... But will name be null?
+    	// Done
         if (null != name) {
         	int n = numFields();
         	
+        	if (name.indexOf('.') >= 0) {
+        		name = name.substring(1+name.indexOf('.'));
+        	}
         	for (int i=0; i<n; i++) {
 	        	if (name.equals(this.getFieldName(i))) {
 	        		return i;

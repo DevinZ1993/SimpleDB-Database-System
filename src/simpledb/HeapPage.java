@@ -17,6 +17,7 @@ public class HeapPage implements Page {
     byte header[];
     Tuple tuples[];
     int numSlots;
+    TransactionId dirtier;
 
     byte[] oldData;
 
@@ -233,8 +234,16 @@ public class HeapPage implements Page {
      * @param t The tuple to delete
      */
     public void deleteTuple(Tuple t) throws DbException {
-        // some code goes here
-        // not necessary for lab1
+        // Done
+    	if (pid == t.getRecordId().getPageId()) {
+    		int tupleno = t.getRecordId().tupleno();
+    		
+    		if (tupleno>=0 && tupleno<numSlots && getSlot(tupleno)) {
+    			setSlot(t.getRecordId().tupleno(), false);
+    			return;
+    		}
+    	}
+    	throw new DbException("tuple not on the page");
     }
 
     /**
@@ -245,8 +254,20 @@ public class HeapPage implements Page {
      * @param t The tuple to add.
      */
     public void addTuple(Tuple t) throws DbException {
-        // some code goes here
-        // not necessary for lab1
+        // Done
+    	if (!td.equals(t.getTupleDesc())) {
+    		throw new DbException("tupledesc mismatch");
+    	} else {
+    		for (int i=0; i<numSlots; i++) {
+	    		if (!getSlot(i)) {
+	    			tuples[i] = t;
+	    			t.setRecordId(new RecordId(pid, i));
+	    			setSlot(i, true);
+	    			return;
+	    		}
+	    	}
+	    	throw new DbException("no empty slots");
+    	}
     }
 
     /**
@@ -254,17 +275,16 @@ public class HeapPage implements Page {
      * that did the dirtying
      */
     public void markDirty(boolean dirty, TransactionId tid) {
-        // some code goes here
-	// not necessary for lab1
+        // Done
+    	dirtier = dirty? tid : null;
     }
 
     /**
      * Returns the tid of the transaction that last dirtied this page, or null if the page is not dirty
      */
     public TransactionId isDirty() {
-        // some code goes here
-	// Not necessary for lab1
-        return null;
+        // Done
+        return dirtier;
     }
 
     /**
@@ -294,8 +314,12 @@ public class HeapPage implements Page {
      * Abstraction to fill or clear a slot on this page.
      */
     private void setSlot(int i, boolean value) {
-        // some code goes here
-        // not necessary for lab1
+        // Done
+    	if (value) {
+    		header[i>>3] |= (1<<(i&7));
+    	} else {
+    		header[i>>3] &= ~(1<<(i&7));
+    	}
     }
 
     /**

@@ -40,8 +40,8 @@ public class Catalog {
      */
     public void addTable(DbFile file, String name, String pkeyField) {
         // Done
-    	if (dbfiles.containsKey(file)) {
-    		pfields.remove(dbfiles.get(file).getId());
+    	if (dbfiles.containsKey(name)) {
+    		pfields.remove(dbfiles.get(name).getId());
     	}
 		dbfiles.put(name, file);
 		pfields.put(file.getId(), pkeyField);
@@ -104,7 +104,7 @@ public class Catalog {
     public DbFile getDbFile(int tableid) throws NoSuchElementException {
         // Done
     	if (!pfields.containsKey(tableid)) {
-    		throw new NoSuchElementException();
+    		throw new NoSuchElementException("no such table");
     	} else {
     		for (String key : dbfiles.keySet()) {
     			if (tableid == dbfiles.get(key).getId()) {

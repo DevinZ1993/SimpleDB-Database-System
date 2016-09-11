@@ -1,6 +1,7 @@
 package simpledb;
 import java.util.*;
 
+
 /**
  * SeqScan is an implementation of a sequential scan access method that reads
  * each tuple of a table in no particular order (e.g., as they are laid out on
@@ -9,8 +10,8 @@ import java.util.*;
 public class SeqScan implements DbIterator {
 
 	private final DbFile dbfile;
-	private DbFileIterator iterator;
 	private final String tableAlias;
+	private DbFileIterator iterator;
 	
     /**
      * Creates a sequential scan over the specified table as a part of the
@@ -68,5 +69,10 @@ public class SeqScan implements DbIterator {
         throws DbException, NoSuchElementException, TransactionAbortedException {
         // DOne
     	iterator.rewind();
+    }
+    
+    public static void main(String[] args) {
+    	
+ 
     }
 }

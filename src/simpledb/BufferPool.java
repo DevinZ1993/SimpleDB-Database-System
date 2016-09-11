@@ -59,10 +59,11 @@ public class BufferPool {
     		}
     	}
     	if (idx < 0) {
-    		throw new DbException("no free space");
+    		evictPage();
+    		return getPage(tid, pid, perm);
     	} else {
-    		return buffer[idx] = 
-    				Database.getCatalog().getDbFile(pid.getTableId()).readPage(pid); 
+    		return buffer[idx] = Database.getCatalog().getDbFile
+    				(pid.getTableId()).readPage(pid);
     	}
     }
 
@@ -126,8 +127,23 @@ public class BufferPool {
      */
     public  void insertTuple(TransactionId tid, int tableId, Tuple t)
         throws DbException, IOException, TransactionAbortedException {
-        // some code goes here
-        // not necessary for lab1
+        // Done
+    	HeapFile hfile = (HeapFile)Database.getCatalog().getDbFile(tableId);
+    	
+    	for (int pgNo=0; pgNo<=hfile.numPages(); pgNo++) {
+    		HeapPageId pageId = new HeapPageId(tableId, pgNo);
+    		HeapPage page = (HeapPage)getPage(tid, pageId, Permissions.READ_ONLY);
+    		
+    		if (page.getNumEmptySlots() > 0) {
+    			for (int tupleNo=0; tupleNo<page.numSlots; tupleNo++) {
+    				if (!page.getSlot(tupleNo)) {
+    					t.setRecordId(new RecordId(pageId, tupleNo));
+    					hfile.addTuple(tid, t);
+    					return;
+    				}
+    			}
+    		}
+    	}
     }
 
     /**
@@ -145,8 +161,11 @@ public class BufferPool {
      */
     public  void deleteTuple(TransactionId tid, Tuple t)
         throws DbException, TransactionAbortedException {
-        // some code goes here
-        // not necessary for lab1
+        // Done
+    	int tableId = t.getRecordId().getPageId().getTableId();
+    	HeapFile hfile = (HeapFile)Database.getCatalog().getDbFile(tableId);
+    	
+    	hfile.deleteTuple(tid, t);
     }
 
     /**
@@ -155,9 +174,12 @@ public class BufferPool {
      *     break simpledb if running in NO STEAL mode.
      */
     public synchronized void flushAllPages() throws IOException {
-        // some code goes here
-        // not necessary for lab1
-
+        // Done
+    	for (int i=0; i<buffer.length; i++) {
+    		if (null != buffer[i] && null != buffer[i].isDirty()) {
+    			flushPage(buffer[i].getId());
+    		}
+    	}
     }
 
     /** Remove the specific page id from the buffer pool.
@@ -175,8 +197,14 @@ public class BufferPool {
      * @param pid an ID indicating the page to flush
      */
     private synchronized  void flushPage(PageId pid) throws IOException {
-        // some code goes here
-        // not necessary for lab1
+        // Done
+    	HeapFile hfile = (HeapFile)Database.getCatalog().getDbFile(pid.getTableId());
+		
+    	try {
+			hfile.writePage(getPage(new TransactionId(), pid, Permissions.READ_WRITE));
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
     }
 
     /** Write all pages of the specified transaction to disk.
@@ -191,8 +219,17 @@ public class BufferPool {
      * Flushes the page to disk to ensure dirty pages are updated on disk.
      */
     private synchronized  void evictPage() throws DbException {
-        // some code goes here
-        // not necessary for lab1
+        // Done
+    	if (null != buffer[buffer.length-1]) {
+    		try {
+    			java.util.Random rand = new java.util.Random();
+    			
+				flushPage(buffer[rand.nextInt(buffer.length)].getId());
+				buffer[buffer.length-1] = null;
+			} catch (IOException e) {
+				throw new DbException("flushPage failed");
+			}
+    	}
     }
 
 }

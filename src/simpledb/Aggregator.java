@@ -5,6 +5,7 @@ package simpledb;
  * list of Tuples.
  */
 public interface Aggregator {
+	static final Field DUMMY_FIELD = new StringField("", 0);
     static final int NO_GROUPING = -1;
 
     public enum Op {

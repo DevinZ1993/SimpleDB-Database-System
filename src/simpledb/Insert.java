@@ -1,5 +1,4 @@
 package simpledb;
-import java.util.*;
 
 /**
  * Inserts tuples read from the child operator into
@@ -7,6 +6,11 @@ import java.util.*;
  */
 public class Insert extends AbstractDbIterator {
 
+	private final TransactionId tid;
+	private final DbIterator child;
+	private final DbFile dbfile;
+	private boolean state;
+	
     /**
      * Constructor.
      * @param t The transaction running the insert.
@@ -16,24 +20,30 @@ public class Insert extends AbstractDbIterator {
      */
     public Insert(TransactionId t, DbIterator child, int tableid)
         throws DbException {
-        // some code goes here
+        // Done
+    	tid = t;
+    	this.child = child;
+    	dbfile = Database.getCatalog().getDbFile(tableid);
     }
 
     public TupleDesc getTupleDesc() {
-        // some code goes here
-        return null;
+        // Done
+        return child.getTupleDesc();
     }
 
     public void open() throws DbException, TransactionAbortedException {
-        // some code goes here
+        // Done
+    	child.open();
     }
 
     public void close() {
-        // some code goes here
+        // Done
+    	child.close();
     }
 
     public void rewind() throws DbException, TransactionAbortedException {
-        // some code goes here
+        // Done
+    	child.rewind();
     }
 
     /**
@@ -51,7 +61,24 @@ public class Insert extends AbstractDbIterator {
      */
     protected Tuple readNext()
             throws TransactionAbortedException, DbException {
-        // some code goes here
-        return null;
+        // Done
+	    if (state) {
+	    	return null;
+	    } else {
+	    	Tuple ret = new Tuple(new TupleDesc(new Type[]{Type.INT_TYPE}));
+	    	int num = 0;
+	    	
+	    	while (child.hasNext()) {
+	    		try {
+	    			dbfile.addTuple(tid, child.next());
+				} catch (Exception e) {
+					throw new DbException("insertTuple failed");
+				}
+	    		num++;
+	    	}
+	    	ret.setField(0, new IntField(num));
+	    	state = true;
+	        return ret;
+	    }
     }
 }

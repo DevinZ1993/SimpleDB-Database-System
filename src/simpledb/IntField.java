@@ -30,7 +30,12 @@ public class IntField implements Field {
     }
 
     public boolean equals(Object field) {
-        return ((IntField) field).value == value;
+    	// Done
+    	if (!(field instanceof IntField)) {
+    		return false;
+    	} else {
+    		return ((IntField) field).value == value;
+    	}
     }
 
     public void serialize(DataOutputStream dos) throws IOException {

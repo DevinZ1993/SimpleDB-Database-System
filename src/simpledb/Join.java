@@ -6,6 +6,10 @@ import java.util.*;
  */
 public class Join extends AbstractDbIterator {
 
+	private final JoinPredicate join;
+	private final DbIterator child1, child2;
+	private Tuple tup1;
+	
     /**
      * Constructor.  Accepts to children to join and the predicate
      * to join them on
@@ -15,28 +19,40 @@ public class Join extends AbstractDbIterator {
      * @param child2 Iterator for the right(inner) relation to join
      */
     public Join(JoinPredicate p, DbIterator child1, DbIterator child2) {
-        // some code goes here
+        // Done
+    	join = p;
+    	this.child1 = child1;
+    	this.child2 = child2;
     }
 
     /**
      * @see simpledb.TupleDesc#combine(TupleDesc, TupleDesc) for possible implementation logic.
      */
     public TupleDesc getTupleDesc() {
-        // some code goes here
-        return null;
+        // Done
+    	return TupleDesc.combine(child1.getTupleDesc(), child2.getTupleDesc());
     }
 
     public void open()
         throws DbException, NoSuchElementException, TransactionAbortedException {
-        // some code goes here
+        // Done
+    	child1.open();
+    	child2.open();
+    	tup1 = child1.hasNext()? child1.next():null;
     }
 
     public void close() {
-        // some code goes here
+        // Done
+    	tup1 = null;
+    	child1.close();
+    	child2.close();
     }
 
     public void rewind() throws DbException, TransactionAbortedException {
-        // some code goes here
+        // Done
+    	child1.rewind();
+    	child2.rewind();
+    	tup1 = child1.hasNext()? child1.next():null;
     }
 
     /**
@@ -59,7 +75,31 @@ public class Join extends AbstractDbIterator {
      * @see JoinPredicate#filter
      */
     protected Tuple readNext() throws TransactionAbortedException, DbException {
-        // some code goes here
+        // Done
+    	while (null != tup1) {
+    		while (child2.hasNext()) {
+    			Tuple tup2 = child2.next();
+    			
+    			if (join.filter(tup1, tup2)) {
+    				Tuple tup = new Tuple(getTupleDesc());
+    				int idx = 0;
+    				
+    				for (int i=0; i<tup1.getTupleDesc().numFields(); i++) {
+    					tup.setField(idx++, tup1.getField(i));
+    				}
+    				for (int i=0; i<tup2.getTupleDesc().numFields(); i++) {
+    					tup.setField(idx++, tup2.getField(i));
+    				}
+    				return tup;
+    			}
+    		}
+    		if (child1.hasNext()) {
+    			tup1 = child1.next();
+    			child2.rewind();
+    		} else {
+    			break;
+    		}
+    	}
         return null;
     }
 }

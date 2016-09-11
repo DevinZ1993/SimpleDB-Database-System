@@ -6,6 +6,10 @@ package simpledb;
  */
 public class Delete extends AbstractDbIterator {
 
+	private final TransactionId tid;
+	private final DbIterator child;
+	private boolean state;
+	
     /**
      * Constructor specifying the transaction that this delete belongs to as
      * well as the child to read from.
@@ -13,24 +17,29 @@ public class Delete extends AbstractDbIterator {
      * @param child The child operator from which to read tuples for deletion
      */
     public Delete(TransactionId t, DbIterator child) {
-        // some code goes here
+    	// Done
+    	tid = t;
+    	this.child = child;
     }
 
     public TupleDesc getTupleDesc() {
-        // some code goes here
-        return null;
+        // Done
+        return child.getTupleDesc();
     }
 
     public void open() throws DbException, TransactionAbortedException {
-        // some code goes here
+        // Done
+    	child.open();
     }
 
     public void close() {
-        // some code goes here
+        // Done
+    	child.close();
     }
 
     public void rewind() throws DbException, TransactionAbortedException {
-        // some code goes here
+        // Done
+    	child.rewind();
     }
 
     /**
@@ -42,7 +51,21 @@ public class Delete extends AbstractDbIterator {
      * @see BufferPool#deleteTuple
      */
     protected Tuple readNext() throws TransactionAbortedException, DbException {
-        // some code goes here
-        return null;
+        // Done
+    	if (state) {
+    		return null;
+    	} else {
+	    	Tuple ret = new Tuple(new TupleDesc(new Type[]{Type.INT_TYPE}));
+	    	BufferPool pool = Database.getBufferPool();
+	    	int num = 0;
+	    	
+	    	while (child.hasNext()) {
+	    		pool.deleteTuple(tid, child.next());
+	    		num++;
+	    	}
+	    	ret.setField(0, new IntField(num));
+	    	state = true;
+	        return ret;
+    	}
     }
 }

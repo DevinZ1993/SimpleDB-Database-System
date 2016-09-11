@@ -1,10 +1,19 @@
 package simpledb;
 
+import java.util.Iterator;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.NoSuchElementException;
+
 /**
  * Knows how to compute some aggregate over a set of StringFields.
  */
 public class StringAggregator implements Aggregator {
 
+	private final int gbfield;
+	private final TupleDesc desc;
+	private final Map<Field,Integer> cnts;
+	
     /**
      * Aggregate constructor
      * @param gbfield the 0-based index of the group-by field in the tuple, or NO_GROUPING if there is no grouping
@@ -15,7 +24,12 @@ public class StringAggregator implements Aggregator {
      */
 
     public StringAggregator(int gbfield, Type gbfieldtype, int afield, Op what) {
-        // some code goes here
+        // Done
+    	this.gbfield = gbfield;
+    	desc = (NO_GROUPING == gbfield)?
+    			new TupleDesc(new Type[]{Type.INT_TYPE}):
+    			new TupleDesc(new Type[]{gbfieldtype, Type.INT_TYPE});
+    	cnts = new HashMap<Field,Integer>();
     }
 
     /**
@@ -23,7 +37,17 @@ public class StringAggregator implements Aggregator {
      * @param tup the Tuple containing an aggregate field and a group-by field
      */
     public void merge(Tuple tup) {
-        // some code goes here
+        // Done
+    	Field key = (gbfield == NO_GROUPING)?
+    			DUMMY_FIELD : tup.getField(gbfield);
+    	
+    	if (null != key) {
+    		if (cnts.containsKey(key)) {
+    			cnts.put(key, cnts.get(key)+1);
+    		} else {
+    			cnts.put(key, 1);
+    		}
+    	}
     }
 
     /**
@@ -35,8 +59,47 @@ public class StringAggregator implements Aggregator {
      *   aggregate specified in the constructor.
      */
     public DbIterator iterator() {
-        // some code goes here
-        throw new UnsupportedOperationException("implement me");
+        // Done
+    	return new DbIterator() {
+    		private Iterator<Field> child;
+    		
+			@Override
+			public void open() throws DbException, TransactionAbortedException {
+				child = cnts.keySet().iterator();
+			}
+			@Override
+			public boolean hasNext() throws DbException,
+					TransactionAbortedException {
+				return null != child && child.hasNext();
+			}
+			@Override
+			public Tuple next() throws DbException,
+					TransactionAbortedException, NoSuchElementException {
+				Tuple tup = new Tuple(desc);
+				Field key = child.next();
+				
+				if (1 == desc.numFields()) {
+					tup.setField(0, new IntField(cnts.get(key)));
+				} else {
+					tup.setField(0, key);
+					tup.setField(1, new IntField(cnts.get(key)));
+				}
+				return tup;
+			}
+			@Override
+			public void rewind() throws DbException,
+					TransactionAbortedException {
+				child = cnts.keySet().iterator();
+			}
+			@Override
+			public TupleDesc getTupleDesc() {
+				return desc;
+			}
+			@Override
+			public void close() {
+				child = null;
+			}
+    	};
     }
 
 }
