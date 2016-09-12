@@ -4,7 +4,7 @@ package simpledb;
  * Inserts tuples read from the child operator into
  * the tableid specified in the constructor
  */
-public class Insert extends AbstractDbIterator {
+public class Insert extends Operator {
 
 	private final TransactionId tid;
 	private final DbIterator child;
@@ -18,17 +18,17 @@ public class Insert extends AbstractDbIterator {
      * @param tableid The table in which to insert tuples.
      * @throws DbException if TupleDesc of child differs from table into which we are to insert.
      */
-    public Insert(TransactionId t, DbIterator child, int tableid)
+    public Insert(TransactionId tid, DbIterator child, int tableid)
         throws DbException {
-        // Done
-    	tid = t;
+    	// Done
+    	this.tid = tid;
     	this.child = child;
-    	dbfile = Database.getCatalog().getDbFile(tableid);
+    	dbfile = Database.getCatalog().getDatabaseFile(tableid);
     }
 
     public TupleDesc getTupleDesc() {
         // Done
-        return child.getTupleDesc();
+        return new TupleDesc(new Type[]{Type.INT_TYPE});
     }
 
     public void open() throws DbException, TransactionAbortedException {
@@ -59,9 +59,9 @@ public class Insert extends AbstractDbIterator {
      * @see Database#getBufferPool
      * @see BufferPool#insertTuple
      */
-    protected Tuple readNext()
+    protected Tuple fetchNext()
             throws TransactionAbortedException, DbException {
-        // Done
+    	// Done
 	    if (state) {
 	    	return null;
 	    } else {
@@ -70,7 +70,7 @@ public class Insert extends AbstractDbIterator {
 	    	
 	    	while (child.hasNext()) {
 	    		try {
-	    			dbfile.addTuple(tid, child.next());
+	    			dbfile.insertTuple(tid, child.next());
 				} catch (Exception e) {
 					throw new DbException("insertTuple failed");
 				}

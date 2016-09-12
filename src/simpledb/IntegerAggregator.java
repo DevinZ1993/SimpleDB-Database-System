@@ -1,17 +1,16 @@
 package simpledb;
 
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.HashMap;
 import java.util.NoSuchElementException;
 
 /**
  * Knows how to compute some aggregate over a set of IntFields.
  */
-public class IntAggregator implements Aggregator {
+public class IntegerAggregator implements Aggregator {
 
-	private final int gbfield;
-	private final int afield;
+	private final int gbfield, afield;
 	private final Op op;
     private final TupleDesc desc;
 	private final Map<Field, Integer> vals;
@@ -25,8 +24,8 @@ public class IntAggregator implements Aggregator {
      * @param what the aggregation operator
      */
 
-    public IntAggregator(int gbfield, Type gbfieldtype, int afield, Op what) {
-        // Done
+    public IntegerAggregator(int gbfield, Type gbfieldtype, int afield, Op what) {
+    	// Done
     	this.gbfield = gbfield;
     	this.afield = afield;
     	op = what;
@@ -41,10 +40,10 @@ public class IntAggregator implements Aggregator {
      * Merge a new tuple into the aggregate, grouping as indicated in the constructor
      * @param tup the Tuple containing an aggregate field and a group-by field
      */
-    public void merge(Tuple tup) {
-        // Done
+    public void mergeTupleIntoGroup(Tuple tup) {
+    	// Done
     	Field key = (NO_GROUPING == gbfield)?
-    			DUMMY_FIELD : tup.getField(gbfield);
+    			_DUMMY_FIELD : tup.getField(gbfield);
     	
     	if (null != key) {
     		if (cnts.containsKey(key)) {
@@ -56,21 +55,17 @@ public class IntAggregator implements Aggregator {
 		    	case MIN:
 		    		vals.put(key, vals.containsKey(key)? 
 		    				Math.min(vals.get(key), tup.getField(afield).hashCode()):tup.getField(afield).hashCode());
-		    		System.out.println("min");
 		    		break;
 		    	case MAX:
 		    		vals.put(key, vals.containsKey(key)? 
 		    				Math.max(vals.get(key), tup.getField(afield).hashCode()):tup.getField(afield).hashCode());
-		    		System.out.println("max");
 		    		break;
 		    	case COUNT:
 		    		vals.put(key, cnts.get(key));
-		    		System.out.println("count");
 		    		break;
 		    	default:
 	    			vals.put(key, vals.containsKey(key)? 
 		    				vals.get(key)+tup.getField(afield).hashCode():tup.getField(afield).hashCode());
-	    			System.out.println(op);
 		    }
     	}
     }
@@ -83,8 +78,8 @@ public class IntAggregator implements Aggregator {
      *   grouping. The aggregateVal is determined by the type of
      *   aggregate specified in the constructor.
      */
-    public DbIterator iterator() {
-        // Done
+	public DbIterator iterator() {
+    	// Done
     	return new DbIterator() {
     		private Iterator<Field> child;
     		

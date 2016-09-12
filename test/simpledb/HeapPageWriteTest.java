@@ -56,7 +56,7 @@ public class HeapPageWriteTest extends SimpleDbTestBase {
 
         for (int i = 0; i < free; ++i) {
             Tuple addition = Utility.getHeapTuple(i, 2);
-            page.addTuple(addition);
+            page.insertTuple(addition);
             assertEquals(free-i-1, page.getNumEmptySlots());
 
             // loop through the iterator to ensure that the tuple actually exists
@@ -78,7 +78,7 @@ public class HeapPageWriteTest extends SimpleDbTestBase {
 
         // now, the page should be full.
         try {
-            page.addTuple(Utility.getHeapTuple(0, 2));
+            page.insertTuple(Utility.getHeapTuple(0, 2));
             throw new Exception("page should be full; expected DbException");
         } catch (DbException e) {
             // explicitly ignored

@@ -57,7 +57,7 @@ public class HeapPageReadTest extends SimpleDbTestBase {
         try {
             File temp = File.createTempFile("table", ".dat");
             temp.deleteOnExit();
-            HeapFileEncoder.convert(table, temp, BufferPool.PAGE_SIZE, 2);
+            HeapFileEncoder.convert(table, temp, BufferPool.getPageSize(), 2);
             EXAMPLE_DATA = TestUtil.readFileBytes(temp.getAbsolutePath());
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -108,16 +108,16 @@ public class HeapPageReadTest extends SimpleDbTestBase {
     }
 
     /**
-     * Unit test for HeapPage.getSlot()
+     * Unit test for HeapPage.isSlotUsed()
      */
     @Test public void getSlot() throws Exception {
         HeapPage page = new HeapPage(pid, EXAMPLE_DATA);
 
         for (int i = 0; i < 20; ++i)
-            assertTrue(page.getSlot(i));
+            assertTrue(page.isSlotUsed(i));
 
         for (int i = 20; i < 504; ++i)
-            assertFalse(page.getSlot(i));
+            assertFalse(page.isSlotUsed(i));
     }
 
     /**

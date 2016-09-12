@@ -60,6 +60,12 @@ public class HeapFileEncoder {
       convert(inFile,outFile,npagebytes,numFields,ts);
       }
 
+  public static void convert(File inFile, File outFile, int npagebytes,
+                 int numFields, Type[] typeAr)
+      throws IOException {
+      convert(inFile,outFile,npagebytes,numFields,typeAr,',');
+  }
+
    /** Convert the specified input text file into a binary
     * page file. <br>
     * Assume format of the input file is (note that only integer fields are
@@ -82,7 +88,7 @@ public class HeapFileEncoder {
     *   malformed input line is encountered
     */
   public static void convert(File inFile, File outFile, int npagebytes,
-                 int numFields, Type[] typeAr)
+                 int numFields, Type[] typeAr, char fieldSeparator)
       throws IOException {
 
       int nrecbytes = 0;
@@ -119,9 +125,9 @@ public class HeapFileEncoder {
     while (!done) {
         int c = br.read();
         
-	// Ignore Windows/Notepad special line endings
-	if (c == '\r')
-	    continue;
+        // Ignore Windows/Notepad special line endings
+        if (c == '\r')
+            continue;
 
         if (c == '\n') {
             if (first)
@@ -130,7 +136,7 @@ public class HeapFileEncoder {
             first = true;
         } else
             first = false;
-        if (c == ',' || c == '\n' || c == '\r') {
+        if (c == fieldSeparator || c == '\n' || c == '\r') {
             String s = new String(buf, 0, curpos);
             if (typeAr[fieldNo] == Type.INT_TYPE) {
                 try {

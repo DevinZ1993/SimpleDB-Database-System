@@ -2,19 +2,19 @@ package simpledb;
 
 import java.util.NoSuchElementException;
 
-/** Helper for implementing DbIterators. It handles <code>close</code>, <code>next</code> and
+/** Abstract class for implementing operators. It handles <code>close</code>, <code>next</code> and
 <code>hasNext</code>. Subclasses only need to implement <code>open</code> and
 <code>readNext</code>. */
-public abstract class AbstractDbIterator implements DbIterator {
+public abstract class Operator implements DbIterator {
     public boolean hasNext() throws DbException, TransactionAbortedException {
-        if (next == null) next = readNext();
+        if (next == null) next = fetchNext();
         return next != null;
     }
 
     public Tuple next() throws
             DbException, TransactionAbortedException, NoSuchElementException {
         if (next == null) {
-            next = readNext();
+            next = fetchNext();
             if (next == null) throw new NoSuchElementException();
         }
 
@@ -24,13 +24,13 @@ public abstract class AbstractDbIterator implements DbIterator {
     }
 
     /** Returns the next Tuple in the iterator, or null if the iteration is
-    finished. AbstractDbIterator uses this method to implement both
+    finished. Operator uses this method to implement both
     <code>next</code> and <code>hasNext</code>.
     @return the next Tuple in the iterator, or null if the iteration is finished. */
-    protected abstract Tuple readNext() throws DbException, TransactionAbortedException;
+    protected abstract Tuple fetchNext() throws DbException, TransactionAbortedException;
 
     /** Closes this iterator. If overridden by a subclass, they should call
-     super.close() in order for AbstractDbIterator's internal state to be
+     super.close() in order for Operator's internal state to be
     consistent. */
     public void close() {
         // Ensures that a future call to next() will fail

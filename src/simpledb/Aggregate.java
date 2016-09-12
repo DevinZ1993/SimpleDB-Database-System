@@ -3,11 +3,11 @@ package simpledb;
 import java.util.*;
 
 /**
- * The Aggregator operator that computes an aggregate (e.g., sum, avg, max,
+ * The Aggregation operator that computes an aggregate (e.g., sum, avg, max,
  * min).  Note that we only support aggregates over a single column, grouped
  * by a single column.
  */
-public class Aggregate extends AbstractDbIterator {
+public class Aggregate extends Operator {
 
 	private final TupleDesc desc;
 	private final Aggregator aggregator;
@@ -26,27 +26,27 @@ public class Aggregate extends AbstractDbIterator {
      * @param aop The aggregation operator to use
      */
     public Aggregate(DbIterator child, int afield, int gfield, Aggregator.Op aop) {
-        // Done
+    	// Done
     	String afieldName = (null != child.getTupleDesc().getFieldName(afield)) ?
-    			aggName(aop)+"("+child.getTupleDesc().getFieldName(afield)+")" : null;
+    			nameOfAggregatorOp(aop)+"("+child.getTupleDesc().getFieldName(afield)+")" : null;
     	
     	if (gfield == Aggregator.NO_GROUPING) {
-    		desc = new TupleDesc(new Type[]{child.getTupleDesc().getType(afield)},
+    		desc = new TupleDesc(new Type[]{child.getTupleDesc().getFieldType(afield)},
     				new String[]{afieldName});
-    		aggregator = (Type.INT_TYPE == child.getTupleDesc().getType(afield)) ?
-    				new IntAggregator(gfield, null, afield, aop):
+    		aggregator = (Type.INT_TYPE == child.getTupleDesc().getFieldType(afield)) ?
+    				new IntegerAggregator(gfield, null, afield, aop):
     					new StringAggregator(gfield, null, afield, aop);
     	} else {
-    		desc = new TupleDesc(new Type[]{child.getTupleDesc().getType(gfield), child.getTupleDesc().getType(afield)},
+    		desc = new TupleDesc(new Type[]{child.getTupleDesc().getFieldType(gfield), child.getTupleDesc().getFieldType(afield)},
     				new String[]{child.getTupleDesc().getFieldName(gfield), afieldName});
-    		aggregator = (Type.INT_TYPE == child.getTupleDesc().getType(afield)) ?
-    				new IntAggregator(gfield, child.getTupleDesc().getType(gfield), afield, aop):
-    					new StringAggregator(gfield, child.getTupleDesc().getType(gfield), afield, aop);
+    		aggregator = (Type.INT_TYPE == child.getTupleDesc().getFieldType(afield)) ?
+    				new IntegerAggregator(gfield, child.getTupleDesc().getFieldType(gfield), afield, aop):
+    					new StringAggregator(gfield, child.getTupleDesc().getFieldType(gfield), afield, aop);
     	}
     	try {
     		child.open();
 			while (child.hasNext()) {
-				aggregator.merge(child.next());
+				aggregator.mergeTupleIntoGroup(child.next());
 			}
 			child.close();
 		} catch (Exception e) {
@@ -54,8 +54,8 @@ public class Aggregate extends AbstractDbIterator {
 		}
     	iterator = aggregator.iterator();
     }
-    
-    public static String aggName(Aggregator.Op aop) {
+
+    public static String nameOfAggregatorOp(Aggregator.Op aop) {
         switch (aop) {
         case MIN:
             return "min";
@@ -85,14 +85,12 @@ public class Aggregate extends AbstractDbIterator {
      * one field representing the result of the aggregate.
      * Should return null if there are no more tuples.
      */
-    protected Tuple readNext() throws TransactionAbortedException, DbException {
-        // some code goes here
+    protected Tuple fetchNext() throws TransactionAbortedException, DbException {
+    	// some code goes here
     	if (!iterator.hasNext()) {
     		return null;
     	} else {
-    		Tuple tup = iterator.next();
-    		System.out.println("actural:"+tup);
-;    		return tup;
+    		return iterator.next();
     	}
     }
 

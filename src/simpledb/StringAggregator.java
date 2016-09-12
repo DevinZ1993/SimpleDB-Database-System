@@ -1,8 +1,8 @@
 package simpledb;
 
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.HashMap;
 import java.util.NoSuchElementException;
 
 /**
@@ -24,7 +24,7 @@ public class StringAggregator implements Aggregator {
      */
 
     public StringAggregator(int gbfield, Type gbfieldtype, int afield, Op what) {
-        // Done
+    	// Done
     	this.gbfield = gbfield;
     	desc = (NO_GROUPING == gbfield)?
     			new TupleDesc(new Type[]{Type.INT_TYPE}):
@@ -36,10 +36,10 @@ public class StringAggregator implements Aggregator {
      * Merge a new tuple into the aggregate, grouping as indicated in the constructor
      * @param tup the Tuple containing an aggregate field and a group-by field
      */
-    public void merge(Tuple tup) {
-        // Done
+    public void mergeTupleIntoGroup(Tuple tup) {
+    	// Done
     	Field key = (gbfield == NO_GROUPING)?
-    			DUMMY_FIELD : tup.getField(gbfield);
+    			_DUMMY_FIELD : tup.getField(gbfield);
     	
     	if (null != key) {
     		if (cnts.containsKey(key)) {
@@ -58,8 +58,8 @@ public class StringAggregator implements Aggregator {
      *   grouping. The aggregateVal is determined by the type of
      *   aggregate specified in the constructor.
      */
-    public DbIterator iterator() {
-        // Done
+	public DbIterator iterator() {
+    	// Done
     	return new DbIterator() {
     		private Iterator<Field> child;
     		

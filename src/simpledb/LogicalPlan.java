@@ -4,7 +4,12 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.io.File;
 import java.util.ArrayList;
+import java.io.IOException;
 import java.util.NoSuchElementException;
+import java.util.Set;
+import java.util.HashSet;
+
+import java.awt.*;
 
 /**
  * LogicalPlan represents a logical query plan that has been through
@@ -220,8 +225,8 @@ public  class LogicalPlan {
         while (tableIt.hasNext()) {
             LogicalScanNode table = tableIt.next();
             try {
-                TupleDesc td = Database.getCatalog().getDbFile(table.t).getTupleDesc();
-                int id = td.nameToId(name);
+                TupleDesc td = Database.getCatalog().getDatabaseFile(table.t).getTupleDesc();
+                int id = td.fieldNameToIndex(name);
                 if (tableName == null) {
                     tableName = table.alias;
                 } else {
@@ -274,7 +279,7 @@ public  class LogicalPlan {
             LogicalScanNode table = tableIt.next();
             SeqScan ss = null;
             try {
-                 ss = new SeqScan(t, Database.getCatalog().getDbFile(table.t).getId(), table.alias);
+                 ss = new SeqScan(t, Database.getCatalog().getDatabaseFile(table.t).getId(), table.alias);
             } catch (NoSuchElementException e) {
                 throw new ParsingException("Unknown table " + table.t);
             }
@@ -299,7 +304,7 @@ public  class LogicalPlan {
             TupleDesc td = subplanMap.get(lf.t).getTupleDesc();
             
             try {
-                ftyp = td.getType(td.nameToId(disambiguateName(lf.f)));
+                ftyp = td.getFieldType(td.fieldNameToIndex(disambiguateName(lf.f)));
             } catch (java.util.NoSuchElementException e) {
                 throw new ParsingException("Unknown field in filter expression " + lf.f);
             }
@@ -310,7 +315,7 @@ public  class LogicalPlan {
 
             Predicate p = null;
             try {
-                p = new Predicate(subplan.getTupleDesc().nameToId(disambiguateName(lf.f)), lf.p,f);
+                p = new Predicate(subplan.getTupleDesc().fieldNameToIndex(disambiguateName(lf.f)), lf.p,f);
             } catch (NoSuchElementException e) {
                 throw new ParsingException("Unknown field " + lf.f);
             }
@@ -318,7 +323,7 @@ public  class LogicalPlan {
 
             TableStats s = statsMap.get(lf.t);
             
-            double sel= s.estimateSelectivity(subplan.getTupleDesc().nameToId(disambiguateName(lf.f)), lf.p, f);
+            double sel= s.estimateSelectivity(subplan.getTupleDesc().fieldNameToIndex(disambiguateName(lf.f)), lf.p, f);
             filterSelectivities.put(lf.t, filterSelectivities.get(lf.t) * sel);
 
             //s.addSelectivityFactor(estimateFilterSelectivity(lf,statsMap));
@@ -398,7 +403,7 @@ public  class LogicalPlan {
                 TupleDesc td = node.getTupleDesc();
                 int  id;
                 try {
-                    id = td.nameToId(disambiguateName(si.fname));
+                    id = td.fieldNameToIndex(disambiguateName(si.fname));
                 } catch (NoSuchElementException e) {
                     throw new ParsingException("Unknown field " +  si.fname + " in SELECT list");
                 }
@@ -412,27 +417,27 @@ public  class LogicalPlan {
                     TupleDesc td = node.getTupleDesc();
                     int  id;
                     try {
-                        id = td.nameToId(disambiguateName(groupByField));
+                        id = td.fieldNameToIndex(disambiguateName(groupByField));
                     } catch (NoSuchElementException e) {
                         throw new ParsingException("Unknown field " +  groupByField + " in GROUP BY statement");
                     }
-                    outTypes.add(td.getType(id));
+                    outTypes.add(td.getFieldType(id));
             } else if (si.fname.equals("null.*")) {
                     TupleDesc td = node.getTupleDesc();
                     for ( i = 0; i < td.numFields(); i++) {
                         outFields.add(i);
-                        outTypes.add(td.getType(i));
+                        outTypes.add(td.getFieldType(i));
                     }
             } else  {
                     TupleDesc td = node.getTupleDesc();
                     int id;
                     try {
-                        id = td.nameToId(disambiguateName(si.fname));
+                        id = td.fieldNameToIndex(disambiguateName(si.fname));
                     } catch (NoSuchElementException e) {
                         throw new ParsingException("Unknown field " +  si.fname + " in SELECT list");
                     }
                     outFields.add(id);
-                    outTypes.add(td.getType(id));
+                    outTypes.add(td.getFieldType(id));
 
                 }
         }
@@ -442,8 +447,8 @@ public  class LogicalPlan {
             Aggregate aggNode;
             try {
                 aggNode = new Aggregate(node,
-                                        td.nameToId(disambiguateName(aggField)),
-                                        groupByField == null?Aggregator.NO_GROUPING:td.nameToId(disambiguateName(groupByField)),
+                                        td.fieldNameToIndex(disambiguateName(aggField)),
+                                        groupByField == null?Aggregator.NO_GROUPING:td.fieldNameToIndex(disambiguateName(groupByField)),
                                 getAggOp(aggOp));
             } catch (NoSuchElementException e) {
                 throw new simpledb.ParsingException(e);
@@ -454,7 +459,7 @@ public  class LogicalPlan {
         }
 
         if (hasOrderBy) {
-            node = new OrderBy(node.getTupleDesc().nameToId(disambiguateName(oByField)), oByAsc, node);
+            node = new OrderBy(node.getTupleDesc().fieldNameToIndex(disambiguateName(oByField)), oByAsc, node);
         }
 
         return new Project(outFields, outTypes, node);

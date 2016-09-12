@@ -4,7 +4,8 @@ import java.util.*;
 /**
  * The Join operator implements the relational join operation.
  */
-public class Join extends AbstractDbIterator {
+
+public class Join extends Operator {
 
 	private final JoinPredicate join;
 	private final DbIterator child1, child2;
@@ -18,19 +19,19 @@ public class Join extends AbstractDbIterator {
      * @param child1 Iterator for the left(outer) relation to join
      * @param child2 Iterator for the right(inner) relation to join
      */
-    public Join(JoinPredicate p, DbIterator child1, DbIterator child2) {
+    public Join(JoinPredicate join, DbIterator child1, DbIterator child2) {
         // Done
-    	join = p;
+    	this.join = join;
     	this.child1 = child1;
     	this.child2 = child2;
     }
 
     /**
-     * @see simpledb.TupleDesc#combine(TupleDesc, TupleDesc) for possible implementation logic.
+     * @see simpledb.TupleDesc#merge(TupleDesc, TupleDesc) for possible implementation logic.
      */
     public TupleDesc getTupleDesc() {
-        // Done
-    	return TupleDesc.combine(child1.getTupleDesc(), child2.getTupleDesc());
+    	// Done
+    	return TupleDesc.merge(child1.getTupleDesc(), child2.getTupleDesc());
     }
 
     public void open()
@@ -38,21 +39,20 @@ public class Join extends AbstractDbIterator {
         // Done
     	child1.open();
     	child2.open();
-    	tup1 = child1.hasNext()? child1.next():null;
+    	tup1 = child1.hasNext()? child1.next() : null;
     }
 
     public void close() {
         // Done
-    	tup1 = null;
     	child1.close();
     	child2.close();
+    	tup1 = null;
     }
 
     public void rewind() throws DbException, TransactionAbortedException {
         // Done
-    	child1.rewind();
-    	child2.rewind();
-    	tup1 = child1.hasNext()? child1.next():null;
+    	close();
+    	open();
     }
 
     /**
@@ -74,10 +74,17 @@ public class Join extends AbstractDbIterator {
      * @return The next matching tuple.
      * @see JoinPredicate#filter
      */
-    protected Tuple readNext() throws TransactionAbortedException, DbException {
+    protected Tuple fetchNext() throws TransactionAbortedException, DbException {
         // Done
     	while (null != tup1) {
-    		while (child2.hasNext()) {
+    		if (!child2.hasNext()) {
+    			if (!child1.hasNext()) {
+    				return null;
+    			} else {
+    				tup1 = child1.next();
+    				child2.rewind();
+    			}
+    		} else {
     			Tuple tup2 = child2.next();
     			
     			if (join.filter(tup1, tup2)) {
@@ -93,13 +100,7 @@ public class Join extends AbstractDbIterator {
     				return tup;
     			}
     		}
-    		if (child1.hasNext()) {
-    			tup1 = child1.next();
-    			child2.rewind();
-    		} else {
-    			break;
-    		}
     	}
-        return null;
+    	return null;
     }
 }

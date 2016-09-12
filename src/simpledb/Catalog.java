@@ -12,12 +12,14 @@ import java.util.*;
  * For now, this is a stub catalog that must be populated with tables by a
  * user program before it can be used -- eventually, this should be converted
  * to a catalog that reads a catalog table from disk.
+ * 
+ * @Threadsafe
  */
-
 public class Catalog {
-
-	private Map<String,DbFile> dbfiles;
-	private Map<Integer,String> pfields;
+	
+	private final Map<Integer,String> names;
+	private final Map<Integer,DbFile> dbfiles;
+	private final Map<Integer,String> pkeyFields;
 	
     /**
      * Constructor.
@@ -25,8 +27,9 @@ public class Catalog {
      */
     public Catalog() {
         // Done
-    	dbfiles = new HashMap<String,DbFile>();
-    	pfields = new HashMap<Integer,String>();
+    	names = new HashMap<Integer,String>();
+    	dbfiles = new HashMap<Integer,DbFile>();
+    	pkeyFields =  new HashMap<Integer,String>();
     }
 
     /**
@@ -40,15 +43,25 @@ public class Catalog {
      */
     public void addTable(DbFile file, String name, String pkeyField) {
         // Done
-    	if (dbfiles.containsKey(name)) {
-    		pfields.remove(dbfiles.get(name).getId());
+    	int tableid = file.getId();
+    	
+    	for (Integer id: names.keySet()) {
+    		if (names.get(id).equals(name)) {
+    			if (id != tableid) {
+    				names.remove(id);
+	    			dbfiles.remove(id);
+	    			pkeyFields.remove(id);
+    			}
+    			break;
+    		}
     	}
-		dbfiles.put(name, file);
-		pfields.put(file.getId(), pkeyField);
+    	names.put(tableid, name);
+    	dbfiles.put(tableid, file);
+    	pkeyFields.put(tableid, pkeyField);
     }
 
     public void addTable(DbFile file, String name) {
-        addTable(file,name,"");
+        addTable(file, name, "");
     }
 
     /**
@@ -57,42 +70,37 @@ public class Catalog {
      * contents are stored in the specified DbFile.
      * @param file the contents of the table to add;  file.getId() is the identfier of
      *    this file/tupledesc param for the calls getTupleDesc and getFile
-     * @param t the format of tuples that are being added
      */
-    /*public void addTable(DbFile file) {
-        addTable(file, (new UUID()).toString());
-    }*/
+    public void addTable(DbFile file) {
+        addTable(file, (UUID.randomUUID()).toString());
+    }
 
     /**
      * Return the id of the table with a specified name,
      * @throws NoSuchElementException if the table doesn't exist
      */
-    public int getTableId(String name) {
+    public int getTableId(String name) throws NoSuchElementException {
         // Done
-    	if (!dbfiles.containsKey(name)) {
-    		throw new  NoSuchElementException();
-    	} else {
-    		return dbfiles.get(name).getId();
+    	for (Integer id: names.keySet()) {
+    		if (names.get(id).equals(name)) {
+    			return id;
+    		}
     	}
+        throw new NoSuchElementException();
     }
 
     /**
      * Returns the tuple descriptor (schema) of the specified table
      * @param tableid The id of the table, as specified by the DbFile.getId()
      *     function passed to addTable
+     * @throws NoSuchElementException if the table doesn't exist
      */
     public TupleDesc getTupleDesc(int tableid) throws NoSuchElementException {
         // Done
-    	if (!pfields.containsKey(tableid)) {
-    		throw new NoSuchElementException();
-    	} else {
-    		for (String key : dbfiles.keySet()) {
-    			if (tableid == dbfiles.get(key).getId()) {
-    				return dbfiles.get(key).getTupleDesc();
-    			}
-    		}
-    		return null;
+    	if (dbfiles.containsKey(tableid)) {
+    		return dbfiles.get(tableid).getTupleDesc();
     	}
+    	throw new NoSuchElementException();
     }
 
     /**
@@ -101,65 +109,58 @@ public class Catalog {
      * @param tableid The id of the table, as specified by the DbFile.getId()
      *     function passed to addTable
      */
-    public DbFile getDbFile(int tableid) throws NoSuchElementException {
+    public DbFile getDatabaseFile(int tableid) throws NoSuchElementException {
         // Done
-    	if (!pfields.containsKey(tableid)) {
-    		throw new NoSuchElementException("no such table");
-    	} else {
-    		for (String key : dbfiles.keySet()) {
-    			if (tableid == dbfiles.get(key).getId()) {
-    				return dbfiles.get(key);
-    			}
-    		}
-    		return null;
+    	if (dbfiles.containsKey(tableid)) {
+    		return dbfiles.get(tableid);
     	}
-    }
-
-    /** Delete all tables from the catalog */
-    public void clear() {
-        // Done
-    	dbfiles.clear();
-    	pfields.clear();
+    	for (Integer key : dbfiles.keySet()) {
+    		System.out.println("has:\t"+key+" "+names.get(key));
+    	}
+    	System.out.println(tableid);
+    	throw new NoSuchElementException();
     }
 
     public String getPrimaryKey(int tableid) {
-        // Done
-    	if (!pfields.containsKey(tableid)) {
-    		return null;
-    	} else {
-    		return pfields.get(tableid);
+    	// Done
+    	if (pkeyFields.containsKey(tableid)) {
+    		return pkeyFields.get(tableid);
     	}
+    	throw new NoSuchElementException();
     }
 
     public Iterator<Integer> tableIdIterator() {
         // Done
-    	return pfields.keySet().iterator();
+        return dbfiles.keySet().iterator();
     }
 
     public String getTableName(int tableid) {
-        // Done
-    	if (!pfields.containsKey(tableid)) {
-    		throw new NoSuchElementException();
-    	} else {
-    		for (String key : dbfiles.keySet()) {
-    			if (tableid == dbfiles.get(key).getId()) {
-    				return key;
-    			}
-    		}
-    		return null;
+    	// Done
+    	if (names.containsKey(tableid)) {
+    		return names.get(tableid);
     	}
+    	throw new NoSuchElementException();
+    }
+    
+    /** Delete all tables from the catalog */
+    public void clear() {
+        // Done
+    	names.clear();
+    	dbfiles.clear();
+    	pkeyFields.clear();
     }
     
     /**
      * Reads the schema from a file and creates the appropriate tables in the database.
      * @param catalogFile
      */
-    @SuppressWarnings("resource")
-	public void loadSchema(String catalogFile) {
+    public void loadSchema(String catalogFile) {
         String line = "";
+        String baseFolder=new File(new File(catalogFile).getAbsolutePath()).getParent();
         try {
-            BufferedReader br = new BufferedReader(new FileReader(new File(catalogFile)));
-
+            @SuppressWarnings("resource")
+			BufferedReader br = new BufferedReader(new FileReader(new File(catalogFile)));
+            
             while ((line = br.readLine()) != null) {
                 //assume line is of the format name (field type, field type, ...)
                 String name = line.substring(0, line.indexOf("(")).trim();
@@ -192,7 +193,7 @@ public class Catalog {
                 Type[] typeAr = types.toArray(new Type[0]);
                 String[] namesAr = names.toArray(new String[0]);
                 TupleDesc t = new TupleDesc(typeAr, namesAr);
-                HeapFile tabHf = new HeapFile(new File(name + ".dat"), t);
+                HeapFile tabHf = new HeapFile(new File(baseFolder+"/"+name + ".dat"), t);
                 addTable(tabHf,name,primaryKey);
                 System.out.println("Added table : " + name + " with schema " + t);
             }

@@ -4,7 +4,7 @@ import java.util.*;
 /**
  * Project is an operator that implements a relational projection.
  */
-public class Project extends AbstractDbIterator {
+public class Project extends Operator {
     DbIterator child;
     TupleDesc td;
     ArrayList<Integer> outFieldIds;
@@ -48,11 +48,11 @@ public class Project extends AbstractDbIterator {
     }
 
     /**
-     * AbstractDbIterator.readNext implementation.
+     * Operator.fetchNext implementation.
      * Iterates over tuples from the child operator, projecting out the fields from the tuple
      * @return The next tuple, or null if there are no more tuples
      */
-    protected Tuple readNext()
+    protected Tuple fetchNext()
         throws NoSuchElementException, TransactionAbortedException, DbException {
         while (child.hasNext()) {
             Tuple t = child.next();

@@ -1,62 +1,81 @@
 package simpledb;
 
 import java.io.*;
+import java.util.concurrent.atomic.AtomicReference;
 
-/** Database is a class that initializes several static
-    variables used by the database system (the catalog, the buffer pool,
-    and the log files, in particular.)
-    <p>
-    Provides a set of methods that can be used to access these variables
-    from anywhere.
-*/
-
+/**
+ * Database is a class that initializes several static variables used by the
+ * database system (the catalog, the buffer pool, and the log files, in
+ * particular.)
+ * <p>
+ * Provides a set of methods that can be used to access these variables from
+ * anywhere.
+ * 
+ * @Threadsafe
+ */
 public class Database {
-	private static Database _instance = new Database();
+    private static AtomicReference<Database> _instance = new AtomicReference<Database>(new Database());
     private final Catalog _catalog;
-    private BufferPool _bufferpool; 
+    private final BufferPool _bufferpool;
 
     private final static String LOGFILENAME = "log";
-    private LogFile _logfile;
+    private final LogFile _logfile;
 
     private Database() {
-    	_catalog = new Catalog();
-    	_bufferpool = new BufferPool(BufferPool.DEFAULT_PAGES);
-    	try {
-            _logfile = new LogFile(new File(LOGFILENAME));
-        } catch(IOException e) {
-            _logfile = null;
+        _catalog = new Catalog();
+        _bufferpool = new BufferPool(BufferPool.DEFAULT_PAGES);
+        LogFile tmp = null;
+        try {
+            tmp = new LogFile(new File(LOGFILENAME));
+        } catch (IOException e) {
             e.printStackTrace();
             System.exit(1);
         }
+        _logfile = tmp;
         // startControllerThread();
     }
 
-    /** Return the log file of the static Database instance*/
+    /** Return the log file of the static Database instance */
     public static LogFile getLogFile() {
-        return _instance._logfile;
+        return _instance.get()._logfile;
     }
 
-    /** Return the buffer pool of the static Database instance*/
+    /** Return the buffer pool of the static Database instance */
     public static BufferPool getBufferPool() {
-        return _instance._bufferpool;
+        return _instance.get()._bufferpool;
     }
 
-    /** Return the catalog of the static Database instance*/
+    /** Return the catalog of the static Database instance */
     public static Catalog getCatalog() {
-        return _instance._catalog;
+        return _instance.get()._catalog;
     }
 
-    /** Method used for testing -- create a new instance of the
-        buffer pool and return it
-    */
+    /**
+     * Method used for testing -- create a new instance of the buffer pool and
+     * return it
+     */
     public static BufferPool resetBufferPool(int pages) {
-        _instance._bufferpool = new BufferPool(pages);
-        return _instance._bufferpool;
+        java.lang.reflect.Field bufferPoolF=null;
+        try {
+            bufferPoolF = Database.class.getDeclaredField("_bufferpool");
+            bufferPoolF.setAccessible(true);
+            bufferPoolF.set(_instance.get(), new BufferPool(pages));
+        } catch (NoSuchFieldException e) {
+            e.printStackTrace();
+        } catch (SecurityException e) {
+            e.printStackTrace();
+        } catch (IllegalArgumentException e) {
+            e.printStackTrace();
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        }
+//        _instance._bufferpool = new BufferPool(pages);
+        return _instance.get()._bufferpool;
     }
 
-    //reset the database, used for unit tests only.
+    // reset the database, used for unit tests only.
     public static void reset() {
-    	_instance = new Database();
+        _instance.set(new Database());
     }
 
 }

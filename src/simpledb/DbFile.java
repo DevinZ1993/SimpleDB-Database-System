@@ -29,7 +29,7 @@ public interface DbFile {
     public void writePage(Page p) throws IOException;
 
     /**
-     * Adds the specified tuple to the file on behalf of transaction.
+     * Inserts the specified tuple to the file on behalf of transaction.
      * This method will acquire a lock on the affected pages of the file, and
      * may block until the lock can be acquired.
      *
@@ -40,7 +40,7 @@ public interface DbFile {
      * @throws DbException if the tuple cannot be added
      * @throws IOException if the needed file can't be read/written
      */
-    public ArrayList<Page> addTuple(TransactionId tid, Tuple t)
+    public ArrayList<Page> insertTuple(TransactionId tid, Tuple t)
         throws DbException, IOException, TransactionAbortedException;
 
     /**
@@ -66,7 +66,7 @@ public interface DbFile {
 
     /**
      * Returns a unique ID used to identify this DbFile in the Catalog. This id
-     * can be used to look up the table via {@link Catalog#getDbFile} and
+     * can be used to look up the table via {@link Catalog#getDatabaseFile} and
      * {@link Catalog#getTupleDesc}.
      * <p>
      * Implementation note:  you will need to generate this tableid somewhere,

@@ -1,5 +1,4 @@
 package simpledb;
-import java.util.*;
 import java.io.*;
 
 public class SimpleDb {
@@ -8,35 +7,47 @@ public class SimpleDb {
         // convert a file
         if(args[0].equals("convert")) {
         try {
-        if (args.length == 3) {
-            HeapFileEncoder.convert(new File(args[1]),
-                        new File(args[1].replaceAll(".txt", ".dat")),
-                        BufferPool.PAGE_SIZE,
-                        Integer.parseInt(args[2]));
-        }
-        else if (args.length == 4) {
-            ArrayList<Type> ts = new ArrayList<Type>();
-            String[] typeStringAr = args[3].split(",");
-            for (String s: typeStringAr) {
-            if (s.toLowerCase().equals("int"))
-                ts.add(Type.INT_TYPE);
-            else if (s.toLowerCase().equals("string"))
-                ts.add(Type.STRING_TYPE);
-            else {
-                System.out.println("Unknown type " + s);
+            if (args.length<3 || args.length>5){
+                System.err.println("Unexpected number of arguments to convert ");
                 return;
             }
-            }
-            HeapFileEncoder.convert(new File(args[1]),
-                        new File(args[1].replaceAll(".txt", ".dat")),
-                        BufferPool.PAGE_SIZE,
-                        Integer.parseInt(args[2]), ts.toArray(new Type[0]));
+            File sourceTxtFile=new File(args[1]);
+            File targetDatFile=new File(args[1].replaceAll(".txt", ".dat"));
+            int numOfAttributes=Integer.parseInt(args[2]);
+            Type[] ts = new Type[numOfAttributes];
+            char fieldSeparator=',';
 
-        } else {
-            System.out.println("Unexpected number of arguments to convert ");
-        }
+            if (args.length == 3) 
+                for (int i=0;i<numOfAttributes;i++)
+                    ts[i]=Type.INT_TYPE;
+            else {
+                String typeString=args[3];
+                String[] typeStringAr = typeString.split(",");
+                if (typeStringAr.length!=numOfAttributes)
+                {
+                        System.err.println("The number of types does not agree with the number of columns");
+                        return;
+                }
+                int index=0;
+                for (String s: typeStringAr) {
+                        if (s.toLowerCase().equals("int"))
+                            ts[index++]=Type.INT_TYPE;
+                        else if (s.toLowerCase().equals("string"))
+                                ts[index++]=Type.STRING_TYPE;
+                            else {
+                                System.err.println("Unknown type " + s);
+                                return;
+                            }
+                }
+                if (args.length==5)
+                    fieldSeparator=args[4].charAt(0);
+            }
+
+            HeapFileEncoder.convert(sourceTxtFile,targetDatFile,
+                        BufferPool.getPageSize(),numOfAttributes,ts,fieldSeparator);
+
         } catch (IOException e) {
-            throw new RuntimeException(e);
+                throw new RuntimeException(e);
         }
         } else if (args[0].equals("print")) {
             File tableFile = new File(args[1]);
@@ -70,8 +81,12 @@ public class SimpleDb {
                 
                 java.lang.reflect.Method m = c.getMethod("main", s);
                 m.invoke(null, (java.lang.Object)newargs);
-            } catch (Exception e) {
+            } catch (ClassNotFoundException cne) {
                 System.out.println("Class Parser not found -- perhaps you are trying to run the parser as a part of lab1?");
+            }
+            catch (Exception e) {
+                System.out.println("Error in parser.");
+                e.printStackTrace();
             }
 
         }

@@ -5,8 +5,8 @@ package simpledb;
  * list of Tuples.
  */
 public interface Aggregator {
-	static final Field DUMMY_FIELD = new StringField("", 0);
     static final int NO_GROUPING = -1;
+    static final Field _DUMMY_FIELD = new StringField("", 0);	// newly-defined
 
     public enum Op {
         MIN, MAX, SUM, AVG, COUNT;
@@ -39,7 +39,7 @@ public interface Aggregator {
      *
      * @param tup the Tuple containing an aggregate field and a group-by field
      */
-    public void merge(Tuple tup);
+    public void mergeTupleIntoGroup(Tuple tup);
 
     /**
      * Create a DbIterator over group aggregate results.

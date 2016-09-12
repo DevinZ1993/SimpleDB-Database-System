@@ -39,15 +39,16 @@ public class StringAggregatorTest extends SimpleDbTestBase {
   }
 
   /**
-   * Test String.merge() and iterator() over a COUNT
+   * Test String.mergeTupleIntoGroup() and iterator() over a COUNT
    */
   @Test public void mergeCount() throws Exception {
     scan1.open();
     StringAggregator agg = new StringAggregator(0, Type.INT_TYPE, 1, Aggregator.Op.COUNT);
 
     for (int[] step : count) {
-      agg.merge(scan1.next());
+      agg.mergeTupleIntoGroup(scan1.next());
       DbIterator it = agg.iterator();
+      it.open();
       TestUtil.matchAllTuples(TestUtil.createTupleList(width1, step), it);
     }
   }
@@ -61,7 +62,7 @@ public class StringAggregatorTest extends SimpleDbTestBase {
     StringAggregator agg = new StringAggregator(0, Type.INT_TYPE, 1, Aggregator.Op.COUNT);
     try {
       while (true)
-        agg.merge(scan1.next());
+        agg.mergeTupleIntoGroup(scan1.next());
     } catch (NoSuchElementException e) {
       // explicitly ignored
     }

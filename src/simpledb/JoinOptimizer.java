@@ -38,7 +38,7 @@ public class JoinOptimizer {
         DbIterator j;
 
         try {
-            t1id = plan1.getTupleDesc().nameToId(p.disambiguateName(lj.f1));
+            t1id = plan1.getTupleDesc().fieldNameToIndex(p.disambiguateName(lj.f1));
         } catch (NoSuchElementException e) {
             throw new ParsingException("Unknown field " + lj.f1);
         }
@@ -47,7 +47,7 @@ public class JoinOptimizer {
             t2id = 0;
         } else {
             try {
-                t2id = plan2.getTupleDesc().nameToId(p.disambiguateName(lj.f2));
+                t2id = plan2.getTupleDesc().fieldNameToIndex(p.disambiguateName(lj.f2));
             } catch (NoSuchElementException e) {
                 throw new ParsingException("Unknown field " + lj.f2);
             }

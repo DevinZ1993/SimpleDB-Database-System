@@ -4,7 +4,7 @@ import java.util.*;
 /**
  * Filter is an operator that implements a relational select.
  */
-public class Filter extends AbstractDbIterator {
+public class Filter extends Operator {
 
 	private final Predicate predicate;
 	private final DbIterator child;
@@ -16,14 +16,14 @@ public class Filter extends AbstractDbIterator {
      * @param p The predicate to filter tuples with
      * @param child The child operator
      */
-    public Filter(Predicate p, DbIterator child) {
-        // Done
-    	predicate = p;
+    public Filter(Predicate predicate, DbIterator child) {
+    	// Done
+    	this.predicate = predicate;
     	this.child = child;
     }
 
     public TupleDesc getTupleDesc() {
-        // Done
+    	// Done
     	return child.getTupleDesc();
     }
 
@@ -52,9 +52,9 @@ public class Filter extends AbstractDbIterator {
      * @return The next tuple that passes the filter, or null if there are no more tuples
      * @see Predicate#filter
      */
-    protected Tuple readNext()
+    protected Tuple fetchNext()
         throws NoSuchElementException, TransactionAbortedException, DbException {
-        // Done
+    	// Done
     	while (child.hasNext()) {
     		Tuple tup = child.next();
     		

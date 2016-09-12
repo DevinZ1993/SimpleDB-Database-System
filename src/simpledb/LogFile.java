@@ -73,8 +73,8 @@ for each active transaction.
 
 public class LogFile {
 
-    File logFile;
-    RandomAccessFile raf;
+    final File logFile;
+    private RandomAccessFile raf;
     Boolean recoveryUndecided; // no call to recover() and no append to log
 
     static final int ABORT_RECORD = 1;
@@ -84,12 +84,12 @@ public class LogFile {
     static final int CHECKPOINT_RECORD = 5;
     static final long NO_CHECKPOINT_ID = -1;
 
-    static int INT_SIZE = 4;
-    static int LONG_SIZE = 8;
+    final static int INT_SIZE = 4;
+    final static int LONG_SIZE = 8;
 
-    long currentOffset = -1;
-    int pageSize;
-    int totalRecords = 0; // for PatchTest
+    long currentOffset = -1;//protected by this
+//    int pageSize;
+    int totalRecords = 0; // for PatchTest //protected by this
 
     HashMap<Long,Long> tidToFirstLogRecord = new HashMap<Long,Long>();
 
@@ -135,7 +135,7 @@ public class LogFile {
         }
     }
 
-    public int getTotalRecords() {
+    public synchronized int getTotalRecords() {
         return totalRecords;
     }
     

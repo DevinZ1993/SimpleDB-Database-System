@@ -58,10 +58,10 @@ public class CatalogTest extends SimpleDbTestBase {
     }
 
     /**
-     * Unit test for Catalog.getDbFile()
+     * Unit test for Catalog.getDatabaseFile()
      */
-    @Test public void getDbFile() throws Exception {
-        DbFile f = Database.getCatalog().getDbFile(-1);
+    @Test public void getDatabaseFile() throws Exception {
+        DbFile f = Database.getCatalog().getDatabaseFile(-1);
 
         // NOTE(ghuo): we try not to dig too deeply into the DbFile API here; we
         // rely on HeapFileTest for that. perform some basic checks.

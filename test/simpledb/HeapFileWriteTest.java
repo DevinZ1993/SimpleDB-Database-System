@@ -28,18 +28,18 @@ public class HeapFileWriteTest extends TestUtil.CreateHeapFile {
     @Test public void addTuple() throws Exception {
         // we should be able to add 504 tuples on an empty page.
         for (int i = 0; i < 504; ++i) {
-            empty.addTuple(tid, Utility.getHeapTuple(i, 2));
+            empty.insertTuple(tid, Utility.getHeapTuple(i, 2));
             assertEquals(1, empty.numPages());
         }
 
         // the next 512 additions should live on a new page
         for (int i = 0; i < 504; ++i) {
-            empty.addTuple(tid, Utility.getHeapTuple(i, 2));
+            empty.insertTuple(tid, Utility.getHeapTuple(i, 2));
             assertEquals(2, empty.numPages());
         }
 
         // and one more, just for fun...
-        empty.addTuple(tid, Utility.getHeapTuple(0, 2));
+        empty.insertTuple(tid, Utility.getHeapTuple(0, 2));
         assertEquals(3, empty.numPages());
     }
 

@@ -283,13 +283,13 @@ public class Parser {
                     throw new simpledb.ParsingException("Complex expressions not allowed in INSERT statements.");
                 ZConstant zc = (ZConstant)e;
                 if (zc.getType() == ZConstant.NUMBER) {
-                    if (td.getType(i) != Type.INT_TYPE) {
+                    if (td.getFieldType(i) != Type.INT_TYPE) {
                         throw new simpledb.ParsingException("Value " + zc.getValue() + " is not an integer, expected a string.");
                     }
                     IntField f= new IntField(new Integer(zc.getValue()));
                     t.setField(i,f);
                 } else if(zc.getType() == ZConstant.STRING) {
-                    if (td.getType(i) != Type.STRING_TYPE) {
+                    if (td.getFieldType(i) != Type.STRING_TYPE) {
                         throw new simpledb.ParsingException("Value " + zc.getValue() + " is a string, expected an integer.");
                     }
                     StringField f= new StringField(zc.getValue(), Type.STRING_LEN);

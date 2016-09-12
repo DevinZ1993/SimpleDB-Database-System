@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import simpledb.*;
+
 import org.junit.Test;
 
 public class AggregateTest extends SimpleDbTestBase {
@@ -83,13 +84,6 @@ public class AggregateTest extends SimpleDbTestBase {
         ArrayList<ArrayList<Integer>> expected =
                 aggregate(createdTuples, operation, 1, groupColumn);
 
-        for (int i=0; i<expected.size(); i++) {
-        	System.out.print("exptected:");
-        	for (int j=0; j<expected.get(i).size(); j++) {
-        		System.out.print(expected.get(i).get(j)+" ");
-        	}
-        	System.out.println();
-        }
         // validate that we get the answer
         validateAggregate(table, operation, 1, groupColumn, expected);
     }

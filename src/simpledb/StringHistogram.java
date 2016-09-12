@@ -26,6 +26,19 @@ public class StringHistogram {
                 v += (ci) << (i * 8);
             } 
         }
+        
+        // XXX: hack to avoid getting wrong results for
+        // strings which don't output in the range min to max
+        if (!(s.equals("") || s.equals("zzzz"))) {
+	        if (v < minVal()) {
+	        	v = minVal();
+	        } 
+	        
+	        if (v > maxVal()) {
+	        	v = maxVal();
+	        }
+        }
+        
         return v;
     }
 

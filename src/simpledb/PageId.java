@@ -31,6 +31,6 @@ public interface PageId {
      */
     public boolean equals(Object o);
 
-    public int pageno();
+    public int pageNumber();
 }
 

@@ -81,7 +81,7 @@ public class SystemTestUtil {
         // Convert the tuples list to a heap file and open it
         File temp = File.createTempFile("table", ".dat");
         temp.deleteOnExit();
-        HeapFileEncoder.convert(tuples, temp, BufferPool.PAGE_SIZE, columns);
+        HeapFileEncoder.convert(tuples, temp, BufferPool.getPageSize(), columns);
         return temp;
     }
 

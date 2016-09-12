@@ -4,7 +4,7 @@ import java.util.*;
 /**
  * OrderBy is an operator that implements a relational ORDER BY.
  */
-public class OrderBy extends AbstractDbIterator {
+public class OrderBy extends Operator {
     DbIterator child;
     TupleDesc td;
     ArrayList<Tuple> childTups = new ArrayList<Tuple>();
@@ -49,12 +49,12 @@ public class OrderBy extends AbstractDbIterator {
     }
 
     /**
-     * AbstractDbIterator.readNext implementation.
+     * Operator.fetchNext implementation.
      * Returns tuples from the child operator in order
      *
      * @return The next tuple in the ordering, or null if there are no more tuples
      */
-    protected Tuple readNext()
+    protected Tuple fetchNext()
         throws NoSuchElementException, TransactionAbortedException, DbException {
         if (it != null && it.hasNext()) {
             return it.next();
