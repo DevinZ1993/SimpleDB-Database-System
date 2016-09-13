@@ -68,7 +68,7 @@ public class BufferPool {
     			try {
     				lock.getLock(tid, i, perm);
     			} catch (InterruptedException e) {
-    				throw new DbException(e.getMessage());
+    				throw new TransactionAbortedException();
     			}
     			return buffer[i];
     		}
@@ -80,7 +80,7 @@ public class BufferPool {
     		try {
     			lock.getLock(tid, idx, perm);
     		} catch (InterruptedException e) {
-    			throw new DbException(e.getMessage());
+    			throw new TransactionAbortedException();
     		}
     		return buffer[idx] = Database.getCatalog().getDatabaseFile
 					(pid.getTableId()).readPage(pid);
@@ -109,16 +109,6 @@ public class BufferPool {
     	throw new IllegalArgumentException("page not in buffer");
     }
 
-    /**
-     * Release all locks associated with a given transaction.
-     *
-     * @param tid the ID of the transaction requesting the unlock
-     */
-    public void transactionComplete(TransactionId tid) throws IOException {
-        // some code goes here
-        // not necessary for lab1|lab2
-    }
-
     /** Return true if the specified transaction has a lock on the specified page */
     public boolean holdsLock(TransactionId tid, PageId pid) {
         // Done
@@ -131,6 +121,16 @@ public class BufferPool {
     }
 
     /**
+     * Release all locks associated with a given transaction.
+     *
+     * @param tid the ID of the transaction requesting the unlock
+     */
+    public void transactionComplete(TransactionId tid) throws IOException {
+        // Done
+    	transactionComplete(tid, true);
+    }
+
+    /**
      * Commit or abort a given transaction; release all locks associated to
      * the transaction.
      *
@@ -139,8 +139,18 @@ public class BufferPool {
      */
     public void transactionComplete(TransactionId tid, boolean commit)
         throws IOException {
-        // some code goes here
-        // not necessary for lab1|lab2
+        // Done
+    	if (commit) {
+    		flushPages(tid);
+    	}
+    	for (int i=0; i<buffer.length; i++) {
+    		if (lock.holdsLock(tid, i)) {
+    			lock.releaseLock(tid, i);
+    			if (!commit) {
+    				buffer[i] = null;
+    			}
+    		}
+    	}
     }
 
     /**
@@ -233,8 +243,8 @@ public class BufferPool {
     public synchronized  void flushPages(TransactionId tid) throws IOException {
         // Done
     	for (int i=0; i<buffer.length; i++) {
-    		if (lock.holdsLock(tid, i)) {
-    			lock.releaseLock(tid, i);
+    		if (null != buffer[i] && tid == buffer[i].isDirty()) {
+    			flushPage(buffer[i].getId());
     		}
     	}
     }
@@ -245,15 +255,22 @@ public class BufferPool {
      */
     private synchronized void evictPage() throws DbException {
         // Done
-    	int idx = evictIdx;
-    	
-    	try {
-			flushPage(buffer[idx].getId());
-			buffer[idx] = null;
-			evictIdx = (evictIdx+1)%buffer.length;
-		} catch (IOException e) {
-			throw new DbException(e.getMessage());
-		}
+    	for (int init=evictIdx; null!=buffer[evictIdx] && 
+    			null!=buffer[evictIdx].isDirty(); ) {
+    		evictIdx = (evictIdx+1)%buffer.length;
+    		if (init == evictIdx) {
+    			throw new DbException("no non-dirty page to evict");
+    		}
+    	}
+    	if (null != buffer[evictIdx]) {
+    		try {
+				flushPage(buffer[evictIdx].getId());
+				buffer[evictIdx] = null;
+				evictIdx = (evictIdx+1)%buffer.length;
+			} catch (IOException e) {
+				throw new DbException(e.getMessage());
+			}
+    	}
     }
 
 }

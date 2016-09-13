@@ -5,6 +5,7 @@
 package simpledb;
 
 import java.util.Collections;
+import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.*;
@@ -13,6 +14,7 @@ import java.util.concurrent.*;
 class BufferLock {
 	
 	private static final TransactionId NIL_TID = new TransactionId();
+	private static final Random rand = new Random();
 	
 	private final ConcurrentMap<Integer,Set<TransactionId>> readers;
 	private final ConcurrentMap<Integer,TransactionId> writers;
@@ -49,22 +51,44 @@ class BufferLock {
 		return holdsReadLock(tid, idx) || holdsWriteLock(tid, idx);
 	}
 	
+	private void tryAcquire(TransactionId tid, Semaphore semp, Semaphore... owneds) 
+			throws InterruptedException {
+		if (!semp.tryAcquire(10+rand.nextInt(50), TimeUnit.MILLISECONDS)) {
+			boolean deadlock = false;
+			
+			//System.out.println(tid+" tryAcquire for the 2nd time");
+			for (int i=0; i<mutexes.length; i++) {
+				if (releaseLock(tid, i)) {
+					deadlock = true;
+				}
+			}
+			if (deadlock) {
+				System.err.println("DEADLOCK");
+				for (Semaphore owned : owneds) {
+					owned.release();
+				}
+				throw new InterruptedException("deadlock detected by "+tid);
+			} else {
+				semp.acquire();
+			}
+		}
+	}
+	
 	public void getLock(TransactionId tid, int idx, Permissions perm) 
 			throws InterruptedException {
-		
 		if (!holdsWriteLock(tid, idx) && !(Permissions.READ_ONLY == perm
 				&& holdsReadLock(tid, idx))) {
 			//System.out.println("Get "+tid+" "+idx+" "+perm);
-			waits[idx].acquire();
+			tryAcquire(tid, waits[idx]);
 			if (Permissions.READ_ONLY == perm) {
 				if (0 == readCnts[idx].getAndIncrement()) {
-					mutexes[idx].acquire();
+					tryAcquire(tid, mutexes[idx], writeMutexes[idx], waits[idx]);
 				}
 				readers.get(idx).add(tid);
 			} else {
-				writeMutexes[idx].acquire();
+				tryAcquire(tid, writeMutexes[idx], waits[idx]);
 				releaseLock(tid, idx);
-				mutexes[idx].acquire();
+				tryAcquire(tid, mutexes[idx], writeMutexes[idx], waits[idx]);
 				writers.put(idx, tid);
 			}
 			waits[idx].release();
@@ -72,7 +96,7 @@ class BufferLock {
 		}
 	}
 	
-	public void releaseLock(TransactionId tid, int idx) {
+	public boolean releaseLock(TransactionId tid, int idx) {
 		if (holdsReadLock(tid, idx)) {
 			//System.out.println("Release "+tid+" "+idx);
 			readers.get(idx).remove(tid);
@@ -80,12 +104,16 @@ class BufferLock {
 				mutexes[idx].release();
 			}
 			//System.out.println("release "+tid+" "+idx);
+			return true;
 		} else if (holdsWriteLock(tid, idx)) {
 			//System.out.println("Release "+tid+" "+idx);
 			writers.put(idx, NIL_TID);
 			mutexes[idx].release();
 			writeMutexes[idx].release();
 			//System.out.println("release "+tid+" "+idx);
+			return true;
+		} else {
+			return false;
 		}
 	}
 	

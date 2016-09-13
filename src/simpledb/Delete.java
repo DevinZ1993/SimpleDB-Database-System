@@ -56,11 +56,10 @@ public class Delete extends Operator {
     		return null;
     	} else {
 	    	Tuple ret = new Tuple(new TupleDesc(new Type[]{Type.INT_TYPE}));
-	    	BufferPool pool = Database.getBufferPool();
 	    	int num = 0;
 	    	
 	    	while (child.hasNext()) {
-	    		pool.deleteTuple(tid, child.next());
+	    		Database.getBufferPool().deleteTuple(tid, child.next());
 	    		num++;
 	    	}
 	    	ret.setField(0, new IntField(num));

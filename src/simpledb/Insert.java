@@ -70,7 +70,7 @@ public class Insert extends Operator {
 	    	
 	    	while (child.hasNext()) {
 	    		try {
-	    			dbfile.insertTuple(tid, child.next());
+	    			Database.getBufferPool().insertTuple(tid, dbfile.getId(), child.next());
 				} catch (Exception e) {
 					throw new DbException("insertTuple failed");
 				}
