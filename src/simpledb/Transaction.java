@@ -8,8 +8,8 @@ import java.io.*;
  */
 
 public class Transaction {
-    TransactionId tid;
-    boolean started = false;
+    private final TransactionId tid;
+    volatile boolean started = false;
 
     public Transaction() {
         tid = new TransactionId();
@@ -34,6 +34,11 @@ public class Transaction {
         transactionComplete(false);
     }
 
+    /** Finish the transaction */
+    public void abort() throws IOException {
+        transactionComplete(true);
+    }
+
     /** Handle the details of transaction commit / abort */
     public void transactionComplete(boolean abort) throws IOException {
 
@@ -48,9 +53,7 @@ public class Transaction {
             }
 
             try {
-
                 Database.getBufferPool().transactionComplete(tid, !abort); // release locks
-
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -58,7 +61,5 @@ public class Transaction {
             //setting this here means we could possibly write multiple abort records -- OK?
             started = false;
         }
-
     }
-
 }

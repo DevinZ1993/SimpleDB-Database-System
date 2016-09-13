@@ -1,10 +1,7 @@
 package simpledb;
 
 import java.io.*;
-
-import java.util.NoSuchElementException;
-import java.util.Random;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.List;
 
 /**
  * BufferPool manages the reading and writing of pages into memory from
@@ -25,8 +22,8 @@ public class BufferPool {
     other classes. BufferPool should use the numPages argument to the
     constructor instead. */
     public static final int DEFAULT_PAGES = 50;
-    
     private final Page[] buffer;
+    public final BufferLock lock;
     private int evictIdx = 0;
     
     /**
@@ -37,10 +34,11 @@ public class BufferPool {
     public BufferPool(int numPages) {
         // Done
     	buffer = new Page[numPages];
+    	lock = new BufferLock(numPages);
     }
     
     public static int getPageSize() {
-      return PAGE_SIZE;
+    	return PAGE_SIZE;
     }
 
     /**
@@ -58,7 +56,7 @@ public class BufferPool {
      * @param pid the ID of the requested page
      * @param perm the requested permissions on the page
      */
-    public  Page getPage(TransactionId tid, PageId pid, Permissions perm)
+    public Page getPage(TransactionId tid, PageId pid, Permissions perm)
         throws TransactionAbortedException, DbException {
     	// Done
     	int idx = -1;
@@ -67,6 +65,11 @@ public class BufferPool {
     		if (null == buffer[i]) {
     			idx = i;
     		} else if (pid.equals(buffer[i].getId())) {
+    			try {
+    				lock.getLock(tid, i, perm);
+    			} catch (InterruptedException e) {
+    				throw new DbException(e.getMessage());
+    			}
     			return buffer[i];
     		}
     	}
@@ -74,8 +77,13 @@ public class BufferPool {
     		evictPage();
     		return getPage(tid, pid, perm);
     	} else {
+    		try {
+    			lock.getLock(tid, idx, perm);
+    		} catch (InterruptedException e) {
+    			throw new DbException(e.getMessage());
+    		}
     		return buffer[idx] = Database.getCatalog().getDatabaseFile
-    				(pid.getTableId()).readPage(pid);
+					(pid.getTableId()).readPage(pid);
     	}
     }
 
@@ -88,9 +96,17 @@ public class BufferPool {
      * @param tid the ID of the transaction requesting the unlock
      * @param pid the ID of the page to unlock
      */
-    public  void releasePage(TransactionId tid, PageId pid) {
-        // some code goes here
-        // not necessary for lab1|lab2
+    public void releasePage(TransactionId tid, PageId pid) {
+        // Done
+    	for (int i=0; i<buffer.length; i++) {
+    		if (null != buffer[i] && buffer[i].getId().equals(pid)) {
+    			if (lock.holdsLock(tid, i)) {
+    				lock.releaseLock(tid, i);
+    				return;
+    			}
+    		}
+    	}
+    	throw new IllegalArgumentException("page not in buffer");
     }
 
     /**
@@ -104,9 +120,13 @@ public class BufferPool {
     }
 
     /** Return true if the specified transaction has a lock on the specified page */
-    public boolean holdsLock(TransactionId tid, PageId p) {
-        // some code goes here
-        // not necessary for lab1|lab2
+    public boolean holdsLock(TransactionId tid, PageId pid) {
+        // Done
+    	for (int i=0; i<buffer.length; i++) {
+    		if (null != buffer[i] && buffer[i].getId().equals(pid)) {
+    			return lock.holdsLock(tid, i);
+    		}
+    	}
         return false;
     }
 
@@ -140,7 +160,11 @@ public class BufferPool {
     public void insertTuple(TransactionId tid, int tableId, Tuple t)
         throws DbException, IOException, TransactionAbortedException {
         // Done
-    	Database.getCatalog().getDatabaseFile(tableId).insertTuple(tid, t);
+    	List<Page> list = Database.getCatalog().getDatabaseFile(tableId).insertTuple(tid, t);
+    	
+    	for (Page page : list) {
+    		page.markDirty(true, tid);
+    	}
     }
 
     /**
@@ -160,7 +184,7 @@ public class BufferPool {
         throws DbException, TransactionAbortedException {
         // Done
     	Database.getCatalog().getDatabaseFile
-    		(t.getRecordId().getPageId().getTableId()).deleteTuple(tid, t);
+    		(t.getRecordId().getPageId().getTableId()).deleteTuple(tid, t).markDirty(true, tid);
     }
 
     /**
@@ -175,7 +199,6 @@ public class BufferPool {
     			flushPage(buffer[i].getId());
     		}
     	}
-
     }
 
     /** Remove the specific page id from the buffer pool.
@@ -208,15 +231,19 @@ public class BufferPool {
     /** Write all pages of the specified transaction to disk.
      */
     public synchronized  void flushPages(TransactionId tid) throws IOException {
-        // some code goes here
-        // not necessary for lab1|lab2
+        // Done
+    	for (int i=0; i<buffer.length; i++) {
+    		if (lock.holdsLock(tid, i)) {
+    			lock.releaseLock(tid, i);
+    		}
+    	}
     }
 
     /**
      * Discards a page from the buffer pool.
      * Flushes the page to disk to ensure dirty pages are updated on disk.
      */
-    private synchronized  int evictPage() throws DbException {
+    private synchronized void evictPage() throws DbException {
         // Done
     	int idx = evictIdx;
     	
@@ -224,7 +251,6 @@ public class BufferPool {
 			flushPage(buffer[idx].getId());
 			buffer[idx] = null;
 			evictIdx = (evictIdx+1)%buffer.length;
-			return idx;
 		} catch (IOException e) {
 			throw new DbException(e.getMessage());
 		}

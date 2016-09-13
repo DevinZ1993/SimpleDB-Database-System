@@ -21,8 +21,12 @@ public class TransactionId implements Serializable {
         return myid;
     }
 
-    public boolean equals(Object tid) {
-        return ((TransactionId) tid).myid == myid;
+    public boolean equals(Object o) {	// revised
+    	if (!(o instanceof TransactionId)) {
+    		return false;
+    	} else {
+    		return ((TransactionId) o).myid == myid;
+    	}
     }
 
     public int hashCode() {

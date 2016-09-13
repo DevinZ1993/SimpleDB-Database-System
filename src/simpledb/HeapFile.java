@@ -144,7 +144,6 @@ public class HeapFile implements DbFile {
     		writePage(page);
     	}
         return list;
-        // not necessary for lab1
     }
 
     // see DbFile.java for javadocs
