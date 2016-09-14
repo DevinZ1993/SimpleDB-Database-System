@@ -145,10 +145,11 @@ public class BufferPool {
     	}
     	for (int i=0; i<buffer.length; i++) {
     		if (lock.holdsLock(tid, i)) {
-    			lock.releaseLock(tid, i);
-    			if (!commit) {
+    			if (!commit && null != buffer[i] &&
+    					tid.equals(buffer[i].isDirty())) {
     				buffer[i] = null;
     			}
+    			lock.releaseLock(tid, i);
     		}
     	}
     }
@@ -217,19 +218,28 @@ public class BufferPool {
         cache.
     */
     public synchronized void discardPage(PageId pid) {
-        // some code goes here
-        // only necessary for lab5
+        // Done
+    	for (int i=0; i<buffer.length; i++) {
+    		if (null != buffer[i] && pid.equals(buffer[i].getId())) {
+    			buffer[i] = null;
+    			break;
+    		}
+    	}
     }
 
     /**
      * Flushes a certain page to disk
      * @param pid an ID indicating the page to flush
      */
-    private synchronized  void flushPage(PageId pid) throws IOException {
+    private synchronized void flushPage(PageId pid) throws IOException {
         // Done
     	for (int i=0; i<buffer.length; i++) {
     		if (null != buffer[i] && buffer[i].getId().equals(pid)) {
-    			if (null != buffer[i].isDirty()) {
+    			TransactionId dirtier = buffer[i].isDirty();
+    			
+    			if (null != dirtier) {
+    				Database.getLogFile().logWrite(dirtier, buffer[i].getBeforeImage(), buffer[i]);
+    				Database.getLogFile().force();
     				Database.getCatalog().getDatabaseFile(pid.getTableId()).writePage(buffer[i]);
     				buffer[i].markDirty(false, buffer[i].isDirty());
     			}
@@ -243,8 +253,9 @@ public class BufferPool {
     public synchronized  void flushPages(TransactionId tid) throws IOException {
         // Done
     	for (int i=0; i<buffer.length; i++) {
-    		if (null != buffer[i] && tid == buffer[i].isDirty()) {
+    		if (null != buffer[i] && lock.holdsLock(tid, i)) {
     			flushPage(buffer[i].getId());
+    			buffer[i].setBeforeImage();
     		}
     	}
     }

@@ -336,6 +336,7 @@ public class LogFile {
                 raf.writeInt(keys.size());
                 while (els.hasNext()) {
                     Long key = els.next();
+                    //System.out.println("WRITING CHECKPOINT TRANSACTION ID: " + key);
                     Debug.log("WRITING CHECKPOINT TRANSACTION ID: " + key);
                     raf.writeLong(key);
                     //Debug.log("WRITING CHECKPOINT TRANSACTION OFFSET: " + tidToFirstLogRecord.get(key));
@@ -463,10 +464,34 @@ public class LogFile {
     */
     public void rollback(TransactionId tid)
         throws NoSuchElementException, IOException {
+    	//System.out.println("rollback("+tid.myid+")");
         synchronized (Database.getBufferPool()) {
             synchronized(this) {
                 preAppend();
-                // some code goes here
+                // Done
+                currentOffset = tidToFirstLogRecord.get(tid.getId());
+                raf.seek(currentOffset);
+                while (raf.getFilePointer() < raf.length()) {
+                	LogRecord record = LogRecord.readNext(raf);
+                	
+                	//System.out.println("Rollback get:\t"+record);
+                	if (null == record || ((record instanceof CheckPointRecord) && 
+                			!((CheckPointRecord)record).containsTid(tid.getId())) ||
+                			((record instanceof AbortRecord) &&
+                					record.tid == tid.getId())) {
+                		break;
+                	} else if ((record instanceof UpdateRecord) &&
+                			tid.getId() == record.tid) {
+                		Page page = ((UpdateRecord)record).beforeImage;
+                		DbFile dbfile = Database.getCatalog().getDatabaseFile
+                				(page.getId().getTableId());
+                		
+                		dbfile.writePage(page);
+                		Database.getBufferPool().discardPage(page.getId());
+                	}
+                	currentOffset = raf.getFilePointer();
+                }
+                tidToFirstLogRecord.remove(tid);
             }
         }
     }
@@ -490,17 +515,90 @@ public class LogFile {
         updates of uncommitted transactions are not installed.
     */
     public void recover() throws IOException {
+    	//System.out.println("recover()");
         synchronized (Database.getBufferPool()) {
             synchronized (this) {
                 recoveryUndecided = false;
-                // some code goes here
+                // Done
+                raf.seek(0);
+                currentOffset = raf.readLong();
+                if (currentOffset >= 0) {
+                	//System.out.println("goto:"+currentOffset);
+                	raf.seek(currentOffset);
+                }
+                Map<Long,Set<PageId>> pageIds = new HashMap<Long,Set<PageId>>();
+                Map<PageId,Page> pages = new HashMap<PageId,Page>();
+                
+                while (raf.getFilePointer()+4 <= raf.length()) {
+                	LogRecord record = LogRecord.readNext(raf);
+                	
+                	//System.out.println("Recover get:\t"+record);
+                	if (null == record) {
+                		break;
+                	} else if (record instanceof CheckPointRecord) {
+                		for (Long key : ((CheckPointRecord)record).keySet()) {
+                			tidToFirstLogRecord.put(key, ((CheckPointRecord)record).getOffset(key));
+                			if (!pageIds.containsKey(key)) {
+                				pageIds.put(key, new HashSet<PageId>());
+                			}
+                		}
+                	} else if (record instanceof BeginRecord) {
+                		tidToFirstLogRecord.put(((BeginRecord)record).tid, (record).offset);
+                		pageIds.put(((BeginRecord)record).tid, new HashSet<PageId>());
+                	} else if (record instanceof CommitRecord) {
+                		//System.out.println("write COMMIT "+record.tid);
+                		for (PageId pageId : pageIds.get(((CommitRecord)record).tid)) {
+                			Page page = pages.get(pageId);
+                			
+                			Database.getCatalog().getDatabaseFile(pageId.
+                					getTableId()).writePage(page);
+                			page.setBeforeImage();
+                			//System.out.println("\tdump page: "+pageId);
+                		}
+                		tidToFirstLogRecord.remove(record.tid);
+                		pageIds.remove(record.tid);
+                	} else if (record instanceof UpdateRecord) {
+                		Page before = ((UpdateRecord)record).beforeImage;
+                		Page after = ((UpdateRecord)record).afterImage;
+                		HeapPage page = new HeapPage(HeapPageId.valueOf(before.getId()), 
+                				after.getPageData());
+                		
+                		page.oldData = (pages.containsKey(page.getId()))?
+                				pages.get(page.getId()).getBeforeImage().getPageData():
+                					before.getPageData();
+                		pages.put(page.getId(), page);
+                		pageIds.get(((UpdateRecord)record).tid).add(page.getId());
+                	} else if (record instanceof AbortRecord) {
+                		rollback(TransactionId.of(record.tid));
+                		tidToFirstLogRecord.remove(record.tid);
+                		pageIds.remove(record.tid);
+                	}
+                }
+                for (long tid : pageIds.keySet()) {
+                	currentOffset = raf.getFilePointer();
+                	raf.writeInt(ABORT_RECORD);
+                    raf.writeLong(tid);
+                    raf.writeLong(currentOffset);
+                    //System.out.println("write ABORT "+tid);
+                    currentOffset = raf.getFilePointer();
+                    force();
+                    rollback(TransactionId.of(tid));
+                    tidToFirstLogRecord.remove(tid);
+                }
             }
+            //print();
          }
     }
 
     /** Print out a human readable represenation of the log */
     public void print() throws IOException {
-        // some code goes here
+        // Done
+    	raf.seek(0);
+    	//System.out.println("[LAST CHECKPOINT OFFSET] "+raf.readLong());
+    	while (raf.getFilePointer() < raf.length()) {
+    		System.out.println(LogRecord.readNext(raf));
+        	currentOffset = raf.getFilePointer();
+    	}
     }
 
     public  synchronized void force() throws IOException {

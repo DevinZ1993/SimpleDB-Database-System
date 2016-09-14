@@ -9,6 +9,7 @@ dist/
 *.out
 *.txt
 *.dat
+*.db
 *.schema
 *.log
 *.aux
