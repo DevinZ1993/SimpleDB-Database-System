@@ -74,8 +74,6 @@ public class DeadlockTest extends TestUtil.CreateHeapFile {
    * attempts p0.write. Rinse and repeat.
    */
   @Test public void testReadWriteDeadlock() throws Exception {
-    System.out.println("testReadWriteDeadlock constructing deadlock:");
-
     LockGrabber lg1Read = startGrabber(tid1, p0, Permissions.READ_ONLY);
     LockGrabber lg2Read = startGrabber(tid2, p1, Permissions.READ_ONLY);
 
@@ -112,8 +110,6 @@ public class DeadlockTest extends TestUtil.CreateHeapFile {
         lg2Write = startGrabber(tid2, p0, Permissions.READ_WRITE);
       }
     }
-
-    System.out.println("testReadWriteDeadlock resolved deadlock");
   }
 
   /**
@@ -122,8 +118,6 @@ public class DeadlockTest extends TestUtil.CreateHeapFile {
    * attempts p0.write.
    */
   @Test public void testWriteWriteDeadlock() throws Exception {
-    System.out.println("testWriteWriteDeadlock constructing deadlock:");
-
     LockGrabber lg1Write0 = startGrabber(tid1, p0, Permissions.READ_WRITE);
     LockGrabber lg2Write1 = startGrabber(tid2, p1, Permissions.READ_WRITE);
 
@@ -160,8 +154,6 @@ public class DeadlockTest extends TestUtil.CreateHeapFile {
         lg2Write1 = startGrabber(tid2, p0, Permissions.READ_WRITE);
       }
     }
-
-    System.out.println("testWriteWriteDeadlock resolved deadlock");
   }
 
   /**
@@ -170,8 +162,6 @@ public class DeadlockTest extends TestUtil.CreateHeapFile {
    * p0.write; t2 attempts to upgrade to p0.write
    */
   @Test public void testUpgradeWriteDeadlock() throws Exception {
-    System.out.println("testUpgradeWriteDeadlock constructing deadlock:");
-
     LockGrabber lg1Read = startGrabber(tid1, p0, Permissions.READ_ONLY);
     LockGrabber lg2Read = startGrabber(tid2, p0, Permissions.READ_ONLY);
 
@@ -208,8 +198,6 @@ public class DeadlockTest extends TestUtil.CreateHeapFile {
         lg2Write = startGrabber(tid2, p0, Permissions.READ_WRITE);
       }
     }
-
-    System.out.println("testUpgradeWriteDeadlock resolved deadlock");
   }
 
   /**

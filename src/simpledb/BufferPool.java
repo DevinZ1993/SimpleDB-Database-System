@@ -23,7 +23,7 @@ public class BufferPool {
     constructor instead. */
     public static final int DEFAULT_PAGES = 50;
     private final Page[] buffer;
-    public final BufferLock lock;
+    public final LockManager lock;
     private int evictIdx = 0;
     
     /**
@@ -34,7 +34,7 @@ public class BufferPool {
     public BufferPool(int numPages) {
         // Done
     	buffer = new Page[numPages];
-    	lock = new BufferLock(numPages);
+    	lock = new LockManager(numPages);
     }
     
     public static int getPageSize() {
@@ -66,7 +66,7 @@ public class BufferPool {
     			idx = i;
     		} else if (pid.equals(buffer[i].getId())) {
     			try {
-    				lock.getLock(tid, i, perm);
+    				lock.acquire(tid, i, perm);
     			} catch (InterruptedException e) {
     				throw new TransactionAbortedException();
     			}
@@ -78,7 +78,7 @@ public class BufferPool {
     		return getPage(tid, pid, perm);
     	} else {
     		try {
-    			lock.getLock(tid, idx, perm);
+    			lock.acquire(tid, idx, perm);
     		} catch (InterruptedException e) {
     			throw new TransactionAbortedException();
     		}
@@ -100,8 +100,8 @@ public class BufferPool {
         // Done
     	for (int i=0; i<buffer.length; i++) {
     		if (null != buffer[i] && buffer[i].getId().equals(pid)) {
-    			if (lock.holdsLock(tid, i)) {
-    				lock.releaseLock(tid, i);
+    			if (lock.isHolding(tid, i)) {
+    				lock.release(tid, i);
     				return;
     			}
     		}
@@ -114,7 +114,7 @@ public class BufferPool {
         // Done
     	for (int i=0; i<buffer.length; i++) {
     		if (null != buffer[i] && buffer[i].getId().equals(pid)) {
-    			return lock.holdsLock(tid, i);
+    			return lock.isHolding(tid, i);
     		}
     	}
         return false;
@@ -144,12 +144,12 @@ public class BufferPool {
     		flushPages(tid);
     	}
     	for (int i=0; i<buffer.length; i++) {
-    		if (lock.holdsLock(tid, i)) {
+    		if (lock.isHolding(tid, i)) {
     			if (!commit && null != buffer[i] &&
     					tid.equals(buffer[i].isDirty())) {
     				buffer[i] = null;
     			}
-    			lock.releaseLock(tid, i);
+    			lock.release(tid, i);
     		}
     	}
     }
@@ -250,10 +250,10 @@ public class BufferPool {
 
     /** Write all pages of the specified transaction to disk.
      */
-    public synchronized  void flushPages(TransactionId tid) throws IOException {
+    public synchronized void flushPages(TransactionId tid) throws IOException {
         // Done
     	for (int i=0; i<buffer.length; i++) {
-    		if (null != buffer[i] && lock.holdsLock(tid, i)) {
+    		if (null != buffer[i] && lock.isHolding(tid, i)) {
     			flushPage(buffer[i].getId());
     			buffer[i].setBeforeImage();
     		}
