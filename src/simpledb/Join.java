@@ -10,12 +10,15 @@ public class Join extends Operator {
 	private final JoinPredicate join;
 	private final DbIterator child1, child2;
 	private Tuple tup1;
+	private int state = 0;
+	private final List<Tuple> cache = new ArrayList<>();
+	private boolean cacheAvailable = false;
 	
     /**
      * Constructor.  Accepts to children to join and the predicate
      * to join them on
      *
-     * @param p The predicate to use to join the children
+     * @param join The predicate to use to join the children
      * @param child1 Iterator for the left(outer) relation to join
      * @param child2 Iterator for the right(inner) relation to join
      */
@@ -40,6 +43,7 @@ public class Join extends Operator {
     	child1.open();
     	child2.open();
     	tup1 = child1.hasNext()? child1.next() : null;
+    	state = 0;
     }
 
     public void close() {
@@ -51,8 +55,10 @@ public class Join extends Operator {
 
     public void rewind() throws DbException, TransactionAbortedException {
         // Done
-    	close();
-    	open();
+    	child1.rewind();
+    	child2.rewind();
+        tup1 = child1.hasNext()? child1.next() : null;
+        state = 0;
     }
 
     /**
@@ -76,31 +82,46 @@ public class Join extends Operator {
      */
     protected Tuple fetchNext() throws TransactionAbortedException, DbException {
         // Done
-    	while (null != tup1) {
-    		if (!child2.hasNext()) {
-    			if (!child1.hasNext()) {
-    				return null;
-    			} else {
-    				tup1 = child1.next();
-    				child2.rewind();
-    			}
-    		} else {
-    			Tuple tup2 = child2.next();
-    			
-    			if (join.filter(tup1, tup2)) {
-    				Tuple tup = new Tuple(getTupleDesc());
-    				int idx = 0;
-    				
-    				for (int i=0; i<tup1.getTupleDesc().numFields(); i++) {
-    					tup.setField(idx++, tup1.getField(i));
-    				}
-    				for (int i=0; i<tup2.getTupleDesc().numFields(); i++) {
-    					tup.setField(idx++, tup2.getField(i));
-    				}
-    				return tup;
-    			}
-    		}
-    	}
-    	return null;
+        if (!cacheAvailable) {
+            final Tuple tuple = doFetchNext();
+            if (cache.size() <= state) {
+                cache.add(tuple);
+            }
+        }
+        if (null == cache.get(state)) {
+            cacheAvailable = true;
+            return null;
+        } else {
+            return cache.get(state++);
+        }
+    }
+
+    private Tuple doFetchNext() throws TransactionAbortedException, DbException {
+        if (null == tup1) {
+            return null;
+        }
+        while (true) {
+            while (!child2.hasNext()) {
+                if (!child1.hasNext()) {
+                    tup1 = null;
+                    return null;
+                } else {
+                    tup1 = child1.next();
+                    child2.rewind();
+                }
+            }
+            Tuple tup2 = child2.next();
+            if (join.filter(tup1, tup2)) {
+                Tuple tup = new Tuple(getTupleDesc());
+                int i = 0;
+                for (int j = 0; j < tup1.getTupleDesc().numFields(); j++) {
+                    tup.setField(i++, tup1.getField(j));
+                }
+                for (int j = 0; j < tup2.getTupleDesc().numFields(); j++) {
+                    tup.setField(i++, tup2.getField(j));
+                }
+                return tup;
+            }
+        }
     }
 }

@@ -1,7 +1,7 @@
-# SimpleDB Database System
+# 6.830 Database System Labs
 
 The lab assignments of [MIT course 6.830](http://ocw.mit.edu/courses/electrical-engineering-and-computer-science/6-830-database-systems-fall-2010/assignments/): 
-implementation of a tiny database management system using the given code skeleton.
+implementation of a tiny relational database management system.
 
 ## Architecture
 
@@ -32,4 +32,9 @@ To create a JAR file in dist/:
 To load a schema file and start the interpreter, use the following command:
 
 	java -jar dist/simpledb.jar parser dblp_data/dblp_simpledb.schema
+
+## Future Work
+
+1. Implement [B+ Tree Index](https://github.com/MIT-DB-Class/course-info/blob/master/lab5.md)
+2. Improve deadlock detection
 

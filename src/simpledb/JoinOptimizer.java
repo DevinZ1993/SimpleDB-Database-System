@@ -88,7 +88,7 @@ public class JoinOptimizer {
             // Insert your code here.
             // HINT:  You may need to use the variable "j" if you implemented a join
             //        algorithm that's more complicated than a basic nested-loops join.
-            return -1.0;
+            return cost1 + card1*cost2 + card1*card2;
         }
     }
 
@@ -111,7 +111,15 @@ public class JoinOptimizer {
             return card1;
         } else {
             // some code goes here
-            return -1;
+            if (!j.p.equals(Predicate.Op.EQUALS)) {
+                return card1*card2*3/10;
+            } else if (t1pkey) {
+                return card2;
+            } else if (t2pkey) {
+                return card1;
+            } else {
+                return Math.max(card1, card2);
+            }
         }
     }
 
@@ -169,7 +177,37 @@ public class JoinOptimizer {
 
         // some code goes here
         //Replace the following
-        return joins;
+        for (LogicalJoinNode node : joins) {
+            if (!stats.containsKey(node.t1) || !stats.containsKey(node.t2) ||
+                    !filterSelectivities.containsKey(node.t1) ||
+                    !filterSelectivities.containsKey(node.t2)) {
+                throw new ParsingException("argument missing table in the join");
+            }
+        }
+        final PlanCache cache = new PlanCache();
+        //cache.addPlan(new HashSet<>(), 0, 0, new Vector<>());
+        for (int len=1; len<=joins.size(); len++) {
+            final Set<Set<LogicalJoinNode>> subsets = enumerateSubsets(joins, len);
+            for (Set<LogicalJoinNode> subset : subsets) {
+                CostCard bestCC = null;
+                for (LogicalJoinNode node : subset) {
+                    final CostCard cc = computeCostAndCardOfSubplan(stats, filterSelectivities, node, subset,
+                            null == bestCC? Double.POSITIVE_INFINITY: bestCC.cost, cache);
+                    if (null == cc) {
+                        continue;
+                    } else if (null == bestCC || bestCC.cost > cc.cost) {
+                        bestCC = cc;
+                    }
+                }
+                if (null != bestCC) {
+                    cache.addPlan(subset, bestCC.cost, bestCC.card, bestCC.plan);
+                }
+            }
+        }
+        if (explain) {
+            printJoins(joins, cache, stats, filterSelectivities);
+        }
+        return cache.getOrder(new HashSet<>(joins));
     } 
  
     //===================== Private Methods =================================
